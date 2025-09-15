@@ -9,3 +9,7 @@ segment-anything
 
 # Utilities for visualization and debugging
 matplotlib
+
+# Additional utilities
+pathlib2
+requests
