@@ -1,28 +1,6 @@
 # AR Preview - AI-Powered Product Visualization
 
-An AI-powered product visualization MVP fo## 📊 Sam## 📊 Sample Results
-
-### TV Placement
-**Input:** Modern TV product → **Output:** [result_tv_20250916_045411.png](output/result_tv_20250916_045411.png)
-- Clean transparency detection for user-provided TV image
-- Realistic wall mounting visualization with proper scaling
-- **Comparison:** [comparison_tv_20250916_045411.png](output/comparison_tv_20250916_045411.png)
-
-### Painting Placement  
-**Input:** Abstract painting → **Output:** [result_painting_20250916_045413.png](output/result_painting_20250916_045413.png)
-- Intelligent wall detection and properly scaled art placement
-- Natural integration with room lighting and perspective
-- **Comparison:** [comparison_painting_20250916_045413.png](output/comparison_painting_20250916_045413.png)
-
-### Wall Segmentation
-- **TV Wall Mask:** [wall_mask_tv_20250916_045411.png](output/wall_mask_tv_20250916_045411.png)
-- **Painting Wall Mask:** [wall_mask_painting_20250916_045413.png](output/wall_mask_painting_20250916_045413.png)ults
-
-### TV Placement
-Demonstrates automatic transparency detection for user TV products and realistic wall mounting visualization.
-
-### Painting Placement  
-Results show intelligent wall detection and properly scaled artwork placement with natural integration.eview applications, allowing users to visualize wall fittings (TVs, paintings, frames) in their own space with realistic scaling, perspective, and lighting.
+An AI-powered product visualization MVP for AR preview applications, allowing users to visualize wall fittings (TVs, paintings, frames) in their own space with realistic scaling, perspective, and lighting.
 
 ## 🎯 Project Overview
 
@@ -116,15 +94,25 @@ python src/pipeline.py --product assets/prod_2_tv.png
 # Edit main.py: use_fast_mode = False
 ```
 
-## � Sample Results
+## 📊 Sample Results
 
-### Paintings Placement
-Results show intelligent wall detection and properly scaled abstract art placement.
+### TV Placement
+**Input:** Modern TV product → **Output:** [result_tv_20250916_045411.png](output/result_tv_20250916_045411.png)
+- Clean transparency detection for user-provided TV image
+- Realistic wall mounting visualization with proper scaling
+- **Comparison:** [comparison_tv_20250916_045411.png](output/comparison_tv_20250916_045411.png)
 
-### TV Placement  
-Demonstrates automatic transparency detection for user products and realistic mounting visualization.
+### Painting Placement  
+**Input:** Abstract painting → **Output:** [result_painting_20250916_045413.png](output/result_painting_20250916_045413.png)
+- Intelligent wall detection and properly scaled art placement
+- Natural integration with room lighting and perspective
+- **Comparison:** [comparison_painting_20250916_045413.png](output/comparison_painting_20250916_045413.png)
 
-## �🛠️ Technology Stack
+### Wall Segmentation
+- **TV Wall Mask:** [wall_mask_tv_20250916_045411.png](output/wall_mask_tv_20250916_045411.png)
+- **Painting Wall Mask:** [wall_mask_painting_20250916_045413.png](output/wall_mask_painting_20250916_045413.png)
+
+## 🛠️ Technology Stack
 
 - **Deep Learning:** PyTorch, TorchVision
 - **Computer Vision:** OpenCV, Segment Anything Model (SAM)
