@@ -1,0 +1,11 @@
+# Core AI and Vision Libraries
+torch
+torchvision
+opencv-python
+numpy
+
+# Meta's Segment Anything Model (SAM)
+segment-anything
+
+# Utilities for visualization and debugging
+matplotlib
