@@ -41,10 +41,9 @@ models/*.pt
 models/*.safetensors
 models/*.ckpt
 
-# Output files
-output/*.png
-output/*.jpg
-output/*.jpeg
+# Output files (keep sample results but ignore temporary files)
+output/temp_*
+output/*.tmp
 
 # Jupyter Notebook
 .ipynb_checkpoints
