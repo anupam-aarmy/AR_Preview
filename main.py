@@ -279,8 +279,15 @@ def visualize_results(original, wall_mask, result, output_dir, product_name="pro
     """Visualize and save results with timestamped filenames"""
     print("Visualizing results...")
     
-    # Create output directory
-    os.makedirs(output_dir, exist_ok=True)
+    # Create organized output directories for Task 1 (Deterministic Pipeline)
+    task1_base = os.path.join(output_dir, "task1_deterministic")
+    results_dir = os.path.join(task1_base, "results")
+    comparisons_dir = os.path.join(task1_base, "comparisons") 
+    masks_dir = os.path.join(task1_base, "masks")
+    
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(comparisons_dir, exist_ok=True)
+    os.makedirs(masks_dir, exist_ok=True)
     
     # Create timestamp for unique filenames
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -288,10 +295,10 @@ def visualize_results(original, wall_mask, result, output_dir, product_name="pro
     # Save wall mask
     mask_viz = np.zeros_like(original)
     mask_viz[wall_mask] = [0, 255, 0]  # Green for wall
-    cv2.imwrite(f"{output_dir}/wall_mask_{product_name}_{timestamp}.png", mask_viz)
+    cv2.imwrite(os.path.join(masks_dir, f"wall_mask_{product_name}_{timestamp}.png"), mask_viz)
     
     # Save final result
-    cv2.imwrite(f"{output_dir}/result_{product_name}_{timestamp}.png", result)
+    cv2.imwrite(os.path.join(results_dir, f"result_{product_name}_{timestamp}.png"), result)
     
     # Create comparison plot
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -309,11 +316,14 @@ def visualize_results(original, wall_mask, result, output_dir, product_name="pro
     axes[2].axis('off')
     
     plt.tight_layout()
-    plt.savefig(f"{output_dir}/comparison_{product_name}_{timestamp}.png", 
+    plt.savefig(os.path.join(comparisons_dir, f"comparison_{product_name}_{timestamp}.png"), 
                dpi=150, bbox_inches='tight')
     plt.close()
     
     print(f"Results saved with timestamp: {timestamp}")
+    print(f"  📁 Results: {results_dir}/")
+    print(f"  📊 Comparisons: {comparisons_dir}/")
+    print(f"  🎭 Masks: {masks_dir}/")
     return timestamp
 
 

@@ -7,6 +7,14 @@ numpy
 # Meta's Segment Anything Model (SAM)
 segment-anything
 
+# Generative AI Pipeline (AIP-2) - Assignment Task 2
+diffusers>=0.21.0           # Core Stable Diffusion pipeline
+transformers>=4.33.0        # Model transformers and tokenizers
+accelerate>=0.21.0          # GPU acceleration and optimization
+controlnet-aux>=0.0.6       # ControlNet preprocessing utilities
+xformers                    # Memory optimization for Stable Diffusion
+pillow>=9.0.0              # Enhanced image processing
+
 # Utilities for visualization and debugging
 matplotlib
 

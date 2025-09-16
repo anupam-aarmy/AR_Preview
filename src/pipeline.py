@@ -10,6 +10,7 @@ from segment_anything import sam_model_registry, SamAutomaticMaskGenerator
 import os
 from pathlib import Path
 import argparse
+from datetime import datetime
 
 class ARPreviewPipeline:
     def __init__(self, model_path="models/sam_vit_h_4b8939.pth"):
@@ -177,14 +178,24 @@ class ARPreviewPipeline:
         return result
     
     def save_results(self, original, wall_mask, result, output_dir, product_name):
-        """Save visualization results"""
-        os.makedirs(output_dir, exist_ok=True)
+        """Save visualization results in organized structure"""
+        # Create organized output directories for Task 1 (Deterministic Pipeline)
+        task1_base = os.path.join(output_dir, "task1_deterministic")
+        results_dir = os.path.join(task1_base, "results")
+        comparisons_dir = os.path.join(task1_base, "comparisons")
+        masks_dir = os.path.join(task1_base, "masks")
+        
+        os.makedirs(results_dir, exist_ok=True)
+        os.makedirs(comparisons_dir, exist_ok=True)
+        os.makedirs(masks_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
         # Save individual results
         mask_viz = np.zeros_like(original)
         mask_viz[wall_mask] = [0, 255, 0]
-        cv2.imwrite(f"{output_dir}/wall_mask_{product_name}.png", mask_viz)
-        cv2.imwrite(f"{output_dir}/result_{product_name}.png", result)
+        cv2.imwrite(os.path.join(masks_dir, f"wall_mask_{product_name}_{timestamp}.png"), mask_viz)
+        cv2.imwrite(os.path.join(results_dir, f"result_{product_name}_{timestamp}.png"), result)
         
         # Create comparison
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -202,11 +213,11 @@ class ARPreviewPipeline:
         axes[2].axis('off')
         
         plt.tight_layout()
-        plt.savefig(f"{output_dir}/comparison_{product_name}.png", 
+        plt.savefig(os.path.join(comparisons_dir, f"comparison_{product_name}_{timestamp}.png"), 
                    dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"Results saved: {output_dir}/result_{product_name}.png")
+        print(f"Results saved: {results_dir}/result_{product_name}_{timestamp}.png")
 
 def main():
     parser = argparse.ArgumentParser(description="AR Preview Pipeline")
