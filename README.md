@@ -1,4 +1,20 @@
-# AR Preview - AI-Powered Product Visualization
+# AR## 🎯 Project Overview
+
+This project implements a **deterministic pipeline** for realistic wall fitting visualization as per AI Assignment requirements:
+
+### ✅ Task 1: Deterministic Pipeline (AIP-1) - **COMPLETED** 
+- **Input:** Single room image (`room_wall_3.png`) as specified in assignment
+- **Wall Segmentation:** SAM (Segment Anything Model) for zero-shot wall detection
+- **Product Placement:** OpenCV perspective transformation with intelligent sizing  
+- **Alpha Blending:** Advanced blending with automatic transparency detection
+- **Performance:** Fast mode (~50s) with High Quality option (~350s)
+
+### 🔄 Task 2: Generative Pipeline (AIP-2) - **PLANNED**
+- **Stable Diffusion Inpainting:** Guided by ControlNet for context-aware generation
+- **ControlNet Conditioning:** Depth/inpainting for proper alignment and scaling  
+- **Size Variations:** Adjust mask scale and prompts for different product sizes
+
+**🎯 Assignment Compliance:** Uses single room image input as specified, with additional reliability testing across multiple room scenarios.Powered Product Visualization
 
 An AI-powered product visualization MVP for AR preview applications, allowing users to visualize wall fittings (TVs, paintings, frames) in their own space with realistic scaling, perspective, and lighting.
 
@@ -6,7 +22,7 @@ An AI-powered product visualization MVP for AR preview applications, allowing us
 
 This project implements two parallel solutions for realistic wall fitting visualization:
 
-### ✅ Task 1: Deterministic Pipeline (AIP-4) - **COMPLETED**
+### ✅ Task 1: Deterministic Pipeline (AIP-1) - **COMPLETED**
 - **Wall Segmentation:** Uses SAM (Segment Anything Model) for zero-shot wall detection
 - **Product Placement:** OpenCV perspective transformation with intelligent sizing
 - **Alpha Blending:** Advanced blending with automatic transparency detection
@@ -24,18 +40,22 @@ AR_Preview/
 ├── .github/
 │   └── copilot-instructions.md    # AI agent guidance and project context
 ├── assets/                        # Input images
-│   ├── room_wall.png             # Sample room photo
+│   ├── room_wall.png             # Sample room photo (original)
+│   ├── room_wall_2.png           # Additional room (lighting test)
+│   ├── room_wall_3.png           # **Main room** (used by pipeline)
+│   ├── room_wall_4.png           # Complex environment room  
 │   ├── prod_1_tv.png             # Product image (TV)
 │   └── prod_2_painting.png       # Product image (painting)
 ├── models/                        # AI model storage
 │   └── sam_vit_h_4b8939.pth     # SAM model checkpoint (~2.4GB)
-├── output/                        # 📊 Generated results (included in repo)
-│   ├── result_tv_20250916_045411.png
-│   ├── result_painting_20250916_045413.png
-│   ├── comparison_tv_20250916_045411.png
-│   ├── comparison_painting_20250916_045413.png
-│   ├── wall_mask_tv_20250916_045411.png
-│   └── wall_mask_painting_20250916_045413.png
+├── output/                        # 📊 Generated results (main + reliability testing)
+│   ├── result_tv_20250916_184241.png          # Main TV result (room_wall_3)
+│   ├── result_painting_20250916_184242.png    # Main painting result (room_wall_3)
+│   ├── comparison_tv_20250916_184241.png      # Main TV comparison
+│   ├── comparison_painting_20250916_184242.png # Main painting comparison
+│   ├── wall_mask_tv_20250916_184241.png       # Wall segmentation mask
+│   ├── wall_mask_painting_20250916_184242.png # Wall segmentation mask
+│   └── [reliability_test_outputs...]          # Additional room scenarios
 ├── src/                          # Source modules
 │   ├── __init__.py
 │   └── pipeline.py              # Enhanced pipeline implementation
@@ -81,36 +101,58 @@ AR_Preview/
 ### Usage
 
 ```bash
-# Run pipeline with both products (fast mode)
+# Run main pipeline (uses room_wall_3.png as per assignment requirements)
 python main.py
 
-# Use enhanced pipeline
+# The pipeline processes:
+# - Single room image: assets/room_wall_3.png
+# - Two products: TV and painting
+# - Fast mode by default (~50s processing time)
+# - For high-quality mode: Edit main.py and set use_fast_mode = False (~350s processing)
+
+# Enhanced pipeline (alternative interface)
 python src/pipeline.py
 
-# Process specific product
+# Process specific product with enhanced pipeline
 python src/pipeline.py --product assets/prod_2_tv.png
-
-# High quality mode (slower but better results)
-# Edit main.py: use_fast_mode = False
 ```
 
 ## 📊 Sample Results
 
-### TV Placement
-**Input:** Modern TV product → **Output:** [result_tv_20250916_045411.png](output/result_tv_20250916_045411.png)
-- Clean transparency detection for user-provided TV image
-- Realistic wall mounting visualization with proper scaling
-- **Comparison:** [comparison_tv_20250916_045411.png](output/comparison_tv_20250916_045411.png)
+### Main Pipeline Results (Assignment Compliance)
+**Input Room:** `room_wall_3.png` (As per AI Assignment requirements: single room image input)  
+**Performance:** Fast mode - 15 wall masks detected in ~50 seconds
 
-### Painting Placement  
-**Input:** Abstract painting → **Output:** [result_painting_20250916_045413.png](output/result_painting_20250916_045413.png)
-- Intelligent wall detection and properly scaled art placement
+#### TV Placement
+**Input:** Modern TV product → **Output:** [result_tv_20250916_184241.png](output/result_tv_20250916_184241.png)
+- Clean transparency detection for user-provided TV image  
+- Realistic wall mounting visualization with proper scaling (25% of wall width)
+- **Comparison:** [comparison_tv_20250916_184241.png](output/comparison_tv_20250916_184241.png)
+
+#### Painting Placement  
+**Input:** Abstract painting → **Output:** [result_painting_20250916_184242.png](output/result_painting_20250916_184242.png)
+- Intelligent wall detection and properly scaled art placement (30% of wall width)
 - Natural integration with room lighting and perspective
-- **Comparison:** [comparison_painting_20250916_045413.png](output/comparison_painting_20250916_045413.png)
+- **Comparison:** [comparison_painting_20250916_184242.png](output/comparison_painting_20250916_184242.png)
 
-### Wall Segmentation
-- **TV Wall Mask:** [wall_mask_tv_20250916_045411.png](output/wall_mask_tv_20250916_045411.png)
-- **Painting Wall Mask:** [wall_mask_painting_20250916_045413.png](output/wall_mask_painting_20250916_045413.png)
+#### Wall Segmentation Analysis
+- **TV Wall Mask:** [wall_mask_tv_20250916_184241.png](output/wall_mask_tv_20250916_184241.png)
+- **Painting Wall Mask:** [wall_mask_painting_20250916_184242.png](output/wall_mask_painting_20250916_184242.png)
+
+### Additional Reliability Testing Results
+*Note: These demonstrate pipeline robustness across different wall conditions and room scenarios*
+
+#### Room 1 (room_wall.png) - Original Sample Room
+- **TV Result:** [result_tv_room1_20250916_180532.png](output/result_tv_room1_20250916_180532.png) | [Comparison](output/comparison_tv_room1_20250916_180532.png)
+- **Painting Result:** [result_painting_room1_20250916_180624.png](output/result_painting_room1_20250916_180624.png) | [Comparison](output/comparison_painting_room1_20250916_180624.png)
+
+#### Room 2 (room_wall_2.png) - Different Lighting Conditions
+- **TV Result:** [result_tv_room2_20250916_180714.png](output/result_tv_room2_20250916_180714.png) | [Comparison](output/comparison_tv_room2_20250916_180714.png)
+- **Painting Result:** [result_painting_room2_20250916_180806.png](output/result_painting_room2_20250916_180806.png) | [Comparison](output/comparison_painting_room2_20250916_180806.png)
+
+#### Room 4 (room_wall_4.png) - Complex Environment with Obstacles
+- **TV Result:** [result_tv_room4_20250916_181039.png](output/result_tv_room4_20250916_181039.png) | [Comparison](output/comparison_tv_room4_20250916_181039.png)
+- **Painting Result:** [result_painting_room4_20250916_181129.png](output/result_painting_room4_20250916_181129.png) | [Comparison](output/comparison_painting_room4_20250916_181129.png)
 
 ## 🛠️ Technology Stack
 
@@ -122,11 +164,13 @@ python src/pipeline.py --product assets/prod_2_tv.png
 
 ## ⚡ Performance Features
 
-- **Fast Mode:** Reduced SAM parameters for quicker processing (16 points vs 32)
-- **Wall Reuse:** Segmentation computed once, reused for multiple products
+- **Fast Mode (Default):** Optimized SAM parameters for quicker processing (~50s for room_wall_3.png, 15 masks)
+- **High Quality Mode:** Enhanced segmentation with more detailed masks (~350s for room_wall_3.png, 42 masks)
+- **Wall Segmentation Reuse:** Computed once, reused for multiple products on same room
 - **Smart Transparency:** Preserves original product appearance while removing backgrounds
 - **Timestamped Outputs:** Preserves all results with unique filenames
 - **Adaptive Scaling:** Product-specific sizing (TVs: 25%, Paintings: 30%)
+- **Memory Optimization:** Auto-resize large images to 1024px max dimension
 
 ## 📋 Development Roadmap (JIRA: AIP-1)
 

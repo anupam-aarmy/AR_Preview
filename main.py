@@ -27,14 +27,14 @@ def load_sam_model(use_fast_config=True):
     
     # Create mask generator with optimized settings
     if use_fast_config:
-        # Faster configuration for development/testing
+        # Faster configuration for development/testing with lower memory usage
         mask_generator = SamAutomaticMaskGenerator(
             sam,
-            points_per_side=16,  # Reduced from default 32
-            pred_iou_thresh=0.88,
-            stability_score_thresh=0.95,
-            crop_n_layers=0,  # Disabled cropping for speed
-            min_mask_region_area=500,  # Larger minimum area
+            points_per_side=12,  # Reduced further from 16
+            pred_iou_thresh=0.90,  # Higher threshold for fewer masks
+            stability_score_thresh=0.96,  # Higher stability requirement
+            crop_n_layers=0,  # Disabled cropping for speed and memory
+            min_mask_region_area=1000,  # Larger minimum area to reduce masks
         )
         print(f"SAM model loaded (FAST mode) on {device}")
     else:
@@ -53,46 +53,62 @@ def load_sam_model(use_fast_config=True):
     return mask_generator
 
 def create_product_mask(product_image):
-    """Create alpha mask for products without transparency - preserves original product appearance"""
-    if len(product_image.shape) == 3 and product_image.shape[2] == 4:
-        # Already has alpha channel
-        return product_image[:, :, 3] / 255.0
+    """Create an alpha mask for products without transparency using smart background detection"""
+    print("Creating product mask using background detection...")
     
-    # For products without alpha channel, create a smart mask
-    # This preserves the original product but removes obvious background
+    h, w = product_image.shape[:2]
     
+    # Convert to different color spaces for better background detection
+    hsv = cv2.cvtColor(product_image, cv2.COLOR_BGR2HSV)
+    lab = cv2.cvtColor(product_image, cv2.COLOR_BGR2LAB)
+    
+    # Create multiple masks based on edge detection and color consistency
     gray = cv2.cvtColor(product_image, cv2.COLOR_BGR2GRAY)
-    h, w = gray.shape
     
-    # Method 1: Edge detection to find product boundaries
-    edges = cv2.Canny(gray, 30, 100)
+    # Edge-based mask: find strong edges (likely product boundaries)
+    edges = cv2.Canny(gray, 50, 150)
+    edges_dilated = cv2.dilate(edges, np.ones((3,3), np.uint8), iterations=2)
     
-    # Method 2: Adaptive thresholding to separate foreground/background
-    # Use multiple threshold values and combine
-    masks = []
+    # Distance transform from edges
+    dist_transform = cv2.distanceTransform(255 - edges_dilated, cv2.DIST_L2, 5)
     
-    # Try different threshold values
-    for thresh in [200, 220, 240]:
-        _, mask = cv2.threshold(gray, thresh, 255, cv2.THRESH_BINARY_INV)
-        masks.append(mask)
+    # Normalize and create mask
+    dist_normalized = cv2.normalize(dist_transform, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     
-    # Combine masks - use intersection for conservative approach
-    combined_mask = masks[0]
-    for mask in masks[1:]:
-        combined_mask = cv2.bitwise_and(combined_mask, mask)
+    # Threshold to create binary mask
+    _, mask_from_edges = cv2.threshold(dist_normalized, 20, 255, cv2.THRESH_BINARY)
     
-    # Include edges to ensure product boundaries are preserved
-    combined_mask = cv2.bitwise_or(combined_mask, edges)
+    # Corner-based background detection (assume corners are background)
+    corner_samples = [
+        product_image[0:10, 0:10],      # Top-left
+        product_image[0:10, -10:],      # Top-right  
+        product_image[-10:, 0:10],      # Bottom-left
+        product_image[-10:, -10:]       # Bottom-right
+    ]
     
-    # Morphological operations to clean up the mask
-    kernel = np.ones((3,3), np.uint8)
+    # Get average background color
+    bg_colors = []
+    for corner in corner_samples:
+        bg_colors.append(np.mean(corner.reshape(-1, 3), axis=0))
+    bg_color = np.mean(bg_colors, axis=0)
+    
+    # Create mask based on color similarity to background
+    color_diff = np.sqrt(np.sum((product_image - bg_color) ** 2, axis=2))
+    color_threshold = np.std(color_diff) * 0.8  # Adaptive threshold
+    mask_from_color = (color_diff > color_threshold).astype(np.uint8) * 255
+    
+    # Combine masks
+    combined_mask = cv2.bitwise_and(mask_from_edges, mask_from_color)
+    
+    # Clean up mask with morphological operations
+    kernel = np.ones((5,5), np.uint8)
     combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
     combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_OPEN, kernel)
     
-    # Fill holes in the mask to ensure complete product coverage
+    # Fill holes using contour detection
     contours, _ = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if contours:
-        # Find the largest contour (should be the main product)
+        # Fill the largest contour
         largest_contour = max(contours, key=cv2.contourArea)
         mask_filled = np.zeros_like(combined_mask)
         cv2.fillPoly(mask_filled, [largest_contour], 255)
@@ -117,7 +133,7 @@ def create_product_mask(product_image):
     return alpha
 
 def segment_walls(image_path, mask_generator):
-    """Segment walls from room image using SAM with timing"""
+    """Segment walls from room image using SAM with timing and memory optimization"""
     print(f"Segmenting walls from {image_path}...")
     start_time = time.time()
     
@@ -125,6 +141,22 @@ def segment_walls(image_path, mask_generator):
     image = cv2.imread(image_path)
     if image is None:
         raise ValueError(f"Could not load image from {image_path}")
+    
+    # Resize large images to reduce memory usage
+    original_shape = image.shape
+    max_dimension = 1024
+    h, w = image.shape[:2]
+    
+    if max(h, w) > max_dimension:
+        if h > w:
+            new_h = max_dimension
+            new_w = int(w * (max_dimension / h))
+        else:
+            new_w = max_dimension
+            new_h = int(h * (max_dimension / w))
+        
+        image = cv2.resize(image, (new_w, new_h))
+        print(f"Resized from {original_shape[:2]} to {image.shape[:2]} for memory optimization")
     
     # Convert BGR to RGB for SAM
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -284,22 +316,41 @@ def visualize_results(original, wall_mask, result, output_dir, product_name="pro
     print(f"Results saved with timestamp: {timestamp}")
     return timestamp
 
+
 def main():
     print("🚀 AR Preview Pipeline Starting...")
     
-    # Configuration
-    room_image_path = "assets/room_wall.png"
+    # Configuration - Following AI Assignment requirements: single room image input
+    room_image_path = "assets/room_wall_3.png"  # Main room image as per assignment (room_wall_3 for testing)
     output_dir = "output"
-    use_fast_mode = True  # Set to False for higher quality
     
-    # Process both products
+    # Performance mode: Set to False for higher quality but slower processing
+    # Fast mode: ~50s processing, High quality: ~350s processing with more detailed masks
+    use_fast_mode = True  # Change to False for HIGH QUALITY mode with more detailed segmentation
+    
+    # Product images to process
     products = [
         ("assets/prod_1_tv.png", "tv"),
         ("assets/prod_2_painting.png", "painting")
     ]
     
     try:
-        # Step 1: Load SAM model
+        # Verify room image exists
+        if not os.path.exists(room_image_path):
+            print(f"❌ Room image not found: {room_image_path}")
+            print("Make sure room_wall.png exists in the assets folder")
+            return
+        
+        # Verify products exist
+        for product_path, product_name in products:
+            if not os.path.exists(product_path):
+                print(f"❌ Product not found: {product_path}")
+                return
+        
+        print(f"🏠 Using room image: {room_image_path}")
+        print(f"🖼️  Processing {len(products)} products: {[p[1] for p in products]}")
+        
+        # Load SAM model with performance configuration
         print(f"🔧 Using {'FAST' if use_fast_mode else 'HIGH QUALITY'} mode")
         mask_generator = load_sam_model(use_fast_config=use_fast_mode)
         if mask_generator is None:
@@ -307,34 +358,41 @@ def main():
         
         results = {}
         
+        # Segment walls once for this room (reuse for multiple products)
+        print(f"\n🔍 Segmenting walls from {room_image_path}...")
+        original_image, wall_mask, all_masks = segment_walls(room_image_path, mask_generator)
+        
+        # Process each product with the same wall segmentation
         for product_path, product_name in products:
-            if not os.path.exists(product_path):
-                print(f"⚠️  Product not found: {product_path}")
-                continue
-                
-            print(f"\n📸 Processing {product_name}...")
+            print(f"\n📸 Processing {product_name} placement...")
             
-            # Step 2: Segment walls (reuse for efficiency)
-            if 'wall_data' not in results:
-                original_image, wall_mask, all_masks = segment_walls(room_image_path, mask_generator)
-                results['wall_data'] = (original_image, wall_mask, all_masks)
-            else:
-                original_image, wall_mask, all_masks = results['wall_data']
-                print(f"Reusing wall segmentation (found {len(all_masks)} masks)")
-            
-            # Step 3: Place product on wall
+            # Place product on wall
             result_image = place_product_on_wall(original_image, wall_mask, product_path)
             
-            # Step 4: Visualize and save results
+            # Visualize and save results
             timestamp = visualize_results(original_image, wall_mask, result_image, output_dir, product_name)
+            
             results[product_name] = {
                 'result': result_image,
-                'timestamp': timestamp
+                'timestamp': timestamp,
+                'product_path': product_path
             }
         
-        print(f"\n✅ Pipeline completed successfully!")
+        # Print completion summary
+        print(f"\n✅ AR Preview Pipeline completed successfully!")
         print(f"📁 Results saved to: {output_dir}/")
-        print(f"🎯 Processed {len([p for p, _ in products if os.path.exists(p)])} products")
+        print(f"📊 PROCESSING SUMMARY:")
+        print(f"🏠 Room: {room_image_path}")
+        print(f"🔍 Wall masks detected: {len(all_masks)}")
+        print(f"⚙️  Performance mode: {'FAST' if use_fast_mode else 'HIGH QUALITY'}")
+        
+        for product_name, result_data in results.items():
+            timestamp = result_data['timestamp']
+            product_path = result_data['product_path']
+            print(f"📸 {product_name.title()} ({product_path}) → result_{product_name}_{timestamp}.png")
+        
+        print(f"\n🎯 Total products processed: {len(results)}")
+        print(f"✅ Pipeline completed as per AI Assignment requirements")
         
     except Exception as e:
         print(f"❌ Pipeline failed: {str(e)}")

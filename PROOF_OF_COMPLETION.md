@@ -3,8 +3,9 @@
 **Project:** AI-Powered Product Visualization for AR Preview Applications  
 **Assignment:** Module 2 (Single Wall Fitting) - Task 1 Implementation  
 **Date:** September 16, 2025  
-**Branch:** `feature/AIP-4-segmentation-pipeline`  
-**Repository:** [anupam-aarmy/AR_Preview](https://github.com/anupam-aarmy/AR_Preview)
+**Branch:** `feature/AIP-1-improvements`  
+**Repository:** [anupam-aarmy/AR_Preview](https://github.com/anupam-aarmy/AR_Preview)  
+**Main Implementation:** Single room input (`room_wall_3.png`) as per AI Assignment requirements
 
 ---
 
@@ -12,7 +13,13 @@
 
 Successfully implemented and delivered a **complete deterministic pipeline** for AR product visualization using Meta's Segment Anything Model (SAM) and OpenCV. The solution accurately segments walls from room photos and realistically places user products (TVs, paintings, frames) with proper scaling, perspective, and natural blending.
 
-**🏆 ACHIEVEMENT: AIP-1 User Story 100% Complete - All subtasks delivered successfully!**
+**🏆 ACHIEVEMENT: AIP-1 User Story 100% Complete + Enhanced Reliability Testing**
+
+**📊 Current Implementation Status:**
+- **Primary Pipeline:** Uses `room_wall_3.png` as single room input (Assignment compliant)
+- **Performance:** Fast mode (15 masks, ~50s) with High Quality option (42 masks, ~350s)
+- **Reliability Testing:** Successfully validated across 4 different room scenarios
+- **Output Generation:** Clean results with timestamped preservation
 
 ## 📋 JIRA Story Completion Status
 
@@ -39,15 +46,37 @@ Successfully implemented and delivered a **complete deterministic pipeline** for
 
 ### 🔧 Technical Implementation
 
+#### Current Implementation Evidence
+
+**Main Pipeline Results** (Assignment Compliant - Single Room Input):
+- **Input:** `room_wall_3.png` (AI Assignment requirement: single room image)
+- **TV Placement:** [result_tv_20250916_184241.png](output/result_tv_20250916_184241.png)
+- **Painting Placement:** [result_painting_20250916_184242.png](output/result_painting_20250916_184242.png)
+- **Wall Analysis:** [wall_mask_tv_20250916_184241.png](output/wall_mask_tv_20250916_184241.png)
+- **Comparisons:** [TV](output/comparison_tv_20250916_184241.png) | [Painting](output/comparison_painting_20250916_184242.png)
+
+**Performance Metrics:**
+- Wall segmentation: 15 masks detected in 47.5 seconds (Fast mode)
+- Memory optimization: Auto-resize from 2813×4999 to 576×1024
+- Product scaling: TV (25% of wall), Painting (30% of wall)
+- Processing mode: Fast (default) with High Quality option available
+
+**Additional Reliability Testing Results:**
+- **Room 1 (Original):** [TV](output/result_tv_room1_20250916_180532.png) | [Painting](output/result_painting_room1_20250916_180624.png)
+- **Room 2 (Lighting):** [TV](output/result_tv_room2_20250916_180714.png) | [Painting](output/result_painting_room2_20250916_180806.png)  
+- **Room 4 (Complex):** [TV](output/result_tv_room4_20250916_181039.png) | [Painting](output/result_painting_room4_20250916_181129.png)
+
 #### Wall Segmentation Engine
 - **Model:** Meta's SAM (ViT-H checkpoint, ~2.4GB)
-- **Performance:** Generates 19 masks in ~79 seconds
-- **Optimization:** Fast mode (16 points/side) vs Quality mode (32 points/side)
-- **Algorithm:** Intelligent wall selection based on area and centrality scoring
+- **Fast Mode:** 12 points/side, reduced layers (15 masks, ~50s)
+- **High Quality:** 32 points/side, crop layers (42 masks, ~350s)
+- **Algorithm:** Center-based wall selection with area scoring
 
-#### Product Placement Logic
+#### Product Placement Logic  
 - **Sizing:** Adaptive scaling (TVs: 25%, Paintings: 30% of wall width)
 - **Positioning:** Center-aligned with aspect ratio preservation
+- **Transparency:** Smart background detection preserving original product appearance
+- **Memory Management:** Auto-resize large images to 1024px max dimension
 - **Transparency:** Advanced background removal for non-transparent products
 - **Blending:** Alpha compositing without artificial shadows
 
