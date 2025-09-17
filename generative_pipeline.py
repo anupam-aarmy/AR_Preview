@@ -8,12 +8,32 @@ It uses inpainting to create realistic products with natural lighting and shadow
 
 import os
 import sys
+import argparse
+import json
 import numpy as np
 import cv2
 import torch
 from PIL import Image
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+# Added AIP-2 fast mode & diagnostic utilities
+from src.generative.utils import (
+    GenerationConfig,
+    apply_fast_mode,
+    choose_scheduler,
+    compute_ssim,
+    synthetic_tv_fallback,
+    save_metadata,
+    BASE_TV_PROMPT,
+    NEGATIVE_TV,
+)
+from src.generative.mask_utils import (
+    expand_and_feather_mask,
+    create_overlay,
+    downscale_for_fast_mode,
+    resize_mask,
+)
 
 # Check if required packages are installed
 def check_dependencies():
@@ -147,7 +167,7 @@ def load_sam_wall_mask(room_image_path):
     print(f"✅ Created optimized wall mask: {wall_x2-wall_x1}x{wall_y2-wall_y1} region")
     return image, mask
 
-def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV"):
+def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV", cfg: GenerationConfig = None, overlays_dir: str = None):
     """
     Generate different product sizes as required by assignment
     Task 2 Requirement: Show at least two product size variations (e.g., 42" vs 55" TV)
@@ -163,15 +183,15 @@ def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV
     if product_type.lower() == "tv":
         size_configs = {
             "42_inch": {
-                "prompt": f"a realistic modern 42 inch black flat screen LED television TV mounted on wall, dark black screen display turned off, ultra thin bezel, wall mounted, professional interior photography, sharp focus, high quality",
-                "negative_prompt": "white screen, bright screen, reflection, glare, cartoon, painting, sketch, low quality, blurry, distorted, text, UI, buttons, remote, person, furniture",
-                "mask_scale": 0.45,  # Smaller for 42"
+                "prompt": BASE_TV_PROMPT + ", 42 inch size",
+                "negative_prompt": NEGATIVE_TV,
+                "mask_scale": 0.45,
                 "description": "42-inch"
             },
             "55_inch": {
-                "prompt": f"a realistic modern 55 inch black flat screen LED television TV mounted on wall, dark black screen display turned off, ultra thin bezel, wall mounted, professional interior photography, sharp focus, high quality",
-                "negative_prompt": "white screen, bright screen, reflection, glare, cartoon, painting, sketch, low quality, blurry, distorted, text, UI, buttons, remote, person, furniture",
-                "mask_scale": 0.6,  # Larger for 55"  
+                "prompt": BASE_TV_PROMPT + ", 55 inch size",
+                "negative_prompt": NEGATIVE_TV,
+                "mask_scale": 0.6,
                 "description": "55-inch"
             }
         }
@@ -269,24 +289,27 @@ def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV
         # Light blur for natural edges without losing shape
         size_mask = cv2.GaussianBlur(size_mask, (5, 5), 0)
         size_mask = (size_mask > 127).astype(np.uint8) * 255
-        
-        size_mask_pil = Image.fromarray(size_mask)
-        
+
+        expanded_mask = expand_and_feather_mask(size_mask, expand_px=12, feather_radius=6)
+        size_mask_pil = Image.fromarray(expanded_mask)
+
         print(f"    📺 {product_type} mask size: {mask_w}x{mask_h} at position ({x1},{y1})")
         
         # Generate product using optimized Stable Diffusion settings
         print(f"    🔄 Generating {config['description']} {product_type} with enhanced settings...")
+        steps = cfg.steps if cfg else 30
+        guidance = 7.5 if cfg and cfg.fast else 8.5
         with torch.no_grad():
             result = pipe(
                 prompt=config['prompt'],
                 negative_prompt=config['negative_prompt'],
                 image=room_pil,
                 mask_image=size_mask_pil,
-                num_inference_steps=30,  # Balanced quality/speed
-                guidance_scale=8.5,  # Strong prompt adherence 
-                strength=0.99,  # Almost complete replacement of masked area
-                width=w,  # Maintain original dimensions
-                height=h   # Maintain original dimensions
+                num_inference_steps=steps,
+                guidance_scale=guidance,
+                strength=0.99,
+                width=w,
+                height=h
             ).images[0]
         
         # Convert back to OpenCV format
@@ -295,15 +318,21 @@ def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV
         results[size_key] = {
             'image': result_cv,
             'mask': size_mask,
+            'expanded_mask': expanded_mask,
             'description': config['description'],
             'prompt': config['prompt']
         }
+
+        if overlays_dir and cfg and cfg.save_overlays:
+            os.makedirs(overlays_dir, exist_ok=True)
+            overlay_img = create_overlay(room_image, expanded_mask, color=(0, 255, 0), alpha=0.4)
+            cv2.imwrite(os.path.join(overlays_dir, f"mask_overlay_{product_type.lower()}_{size_key}.png"), overlay_img)
         
         print(f"    ✅ Generated {config['description']} {product_type}")
     
     return results
 
-def save_generation_results(original_image, results, output_dir, product_type="TV"):
+def save_generation_results(original_image, results, output_dir, product_type="TV", cfg: GenerationConfig = None, metadata: dict = None):
     """Save the generated product variations with comparison"""
     print("💾 Saving generation results...")
     
@@ -362,13 +391,45 @@ def save_generation_results(original_image, results, output_dir, product_type="T
     print(f"  📁 Generated: {generated_dir}/")
     print(f"  📊 Comparisons: {comparisons_dir}/")
     print(f"  🎭 Masks: {masks_dir}/")
+    # Optional metadata append
+    if metadata is not None:
+        meta_path = os.path.join(task2_base, f"metadata_{product_type.lower()}_{timestamp}.json")
+        try:
+            with open(meta_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, indent=2)
+        except Exception:
+            pass
     return timestamp
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Task 2 Generative Pipeline (Stable Diffusion Inpainting)")
+    parser.add_argument('--room-image', default='assets/room_wall.png', help='Input room image path')
+    parser.add_argument('--product-type', default='Both', choices=['TV', 'Painting', 'Both'], help='Product type to generate')
+    parser.add_argument('--steps', type=int, default=30, help='Number of inference steps')
+    parser.add_argument('--fast', action='store_true', help='Enable fast mode (downscale + fewer steps + fast scheduler)')
+    parser.add_argument('--width', type=int, default=None, help='Force working width (optional)')
+    parser.add_argument('--height', type=int, default=None, help='Force working height (optional)')
+    parser.add_argument('--no-save-overlays', action='store_true', help='Disable saving diagnostic overlays')
+    parser.add_argument('--no-fallback', action='store_true', help='Disable synthetic TV fallback if no change detected')
+    parser.add_argument('--output-dir', default='output', help='Base output directory')
+    return parser.parse_args()
+
+
 def main():
-    """Main function for Task 2: Stable Diffusion Product Generation"""
     print("🎯 Task 2: Stable Diffusion Product Generation")
     print("📋 Assignment: Generate realistic product placement with size variations")
     print("-" * 70)
+    args = parse_args()
+
+    cfg = GenerationConfig(
+        steps=args.steps,
+        width=args.width,
+        height=args.height,
+        fast=args.fast,
+        save_overlays=not args.no_save_overlays,
+        no_fallback=args.no_fallback,
+    )
+    cfg = apply_fast_mode(cfg)
     
     # Check dependencies first
     if not check_dependencies():
@@ -381,9 +442,8 @@ def main():
         print("❌ Failed to set up Stable Diffusion pipeline")
         return False
     
-    # Configuration
-    room_image_path = "assets/room_wall.png"  # Input room image
-    output_dir = "output"
+    room_image_path = args.room_image
+    output_dir = args.output_dir
     
     # Load room and wall area (integration with Task 1)
     try:
@@ -393,19 +453,44 @@ def main():
         print(f"❌ Failed to load room image: {str(e)}")
         return False
     
-    # Generate TV size variations (Assignment requirement)
-    print("\n🎨 Generating TV size variations (Assignment Task 2 requirement)...")
-    tv_results = generate_product_sizes(pipe, device, room_image, wall_mask, "TV")
-    
-    # Save TV results
-    tv_timestamp = save_generation_results(room_image, tv_results, output_dir, "TV")
-    
-    # Generate painting variations for completeness
-    print("\n🎨 Generating painting variations...")
-    painting_results = generate_product_sizes(pipe, device, room_image, wall_mask, "Painting")
-    
-    # Save painting results
-    painting_timestamp = save_generation_results(room_image, painting_results, output_dir, "Painting")
+    working_room = room_image.copy()
+    scale_factor = 1.0
+    if cfg.fast:
+        working_room, scale_factor = downscale_for_fast_mode(working_room, cfg.downscale_max_side)
+        if scale_factor != 1.0:
+            print(f"⚡ Fast mode downscale applied: scale={scale_factor:.3f} (max side {cfg.downscale_max_side})")
+    if cfg.width and cfg.height:
+        working_room = cv2.resize(working_room, (cfg.width, cfg.height), interpolation=cv2.INTER_AREA)
+        print(f"📐 Forced working resolution: {cfg.width}x{cfg.height}")
+
+    wall_mask_work = resize_mask(wall_mask, working_room.shape[:2])
+    pipe = choose_scheduler(pipe, cfg.fast)
+    overlays_dir = os.path.join(output_dir, 'task2_generative', 'overlays') if cfg.save_overlays else None
+
+    tv_results = {}
+    if args.product_type in ("TV", "Both"):
+        print("\n🎨 Generating TV size variations (Assignment Task 2 requirement)...")
+        tv_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "TV", cfg, overlays_dir)
+
+    painting_results = {}
+    if args.product_type in ("Painting", "Both"):
+        print("\n🎨 Generating painting variations...")
+        painting_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "Painting", cfg, overlays_dir)
+
+    metadata_common = {
+        'fast_mode': cfg.fast,
+        'steps': cfg.steps,
+        'scale_factor': scale_factor,
+        'scheduler': pipe.scheduler.__class__.__name__ if pipe else None,
+        'device': device,
+    }
+
+    tv_timestamp = None
+    if tv_results:
+        tv_timestamp = save_generation_results(working_room, tv_results, output_dir, "TV", cfg=cfg, metadata=metadata_common)
+    painting_timestamp = None
+    if painting_results:
+        painting_timestamp = save_generation_results(working_room, painting_results, output_dir, "Painting", cfg=cfg, metadata=metadata_common)
     
     print(f"\n✅ Task 2 COMPLETED: Stable Diffusion Product Generation!")
     print(f"📊 Generated products: {len(tv_results)} TV + {len(painting_results)} Painting variations")

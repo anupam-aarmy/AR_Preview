@@ -33,10 +33,20 @@ Date: 2025-09-17
 | 8 | Fallback Synthetic TV Renderer | Guarantee output | Adds bezel + dark panel if unchanged |
 | 9 | ControlNet Depth Integration | Structure guidance | Depth map generated & used |
 
+### 3.1 Implemented (Current Session)
+- Added fast mode flag `--fast` (downscale + scheduler swap + step reduction)
+- Added CLI args: `--steps`, `--room-image`, `--product-type`, `--width`, `--height`, `--no-save-overlays`, `--no-fallback`, `--output-dir`
+- Introduced mask expansion + feathering and overlay saves (`output/task2_generative/overlays/`)
+- Added structured metadata JSON per run (`output/task2_generative/run_metadata.json` and per-product metadata files)
+- Refactored prompts to centralized templates (`src/generative/utils.py`)
+- Scheduler automatically switches to `DPMSolverMultistepScheduler` in fast mode (best-effort)
+
+Pending (next iteration): SSIM delta detection + fallback compositor activation, ControlNet depth integration.
+
 ## 4. CLI Arguments To Add
 | Arg | Default | Description |
 |-----|---------|-------------|
-| `--fast` | false | Enables lower steps + downscale + DPMSolver |
+| `--fast` | false | (Implemented) Enables lower steps (<=15) + downscale (<=896px) + DPMSolver |
 | `--steps` | 30 | Override inference steps |
 | `--width` / `--height` | auto | Optional forced working resolution |
 | `--save-overlays` | true | Save diagnostic overlay images |
@@ -62,8 +72,8 @@ Steps if SSIM >= 0.98 within mask:
 5. Save `fallback_tv_applied=true` in metadata JSON.
 
 ## 7. File Additions Planned
-- `src/generative/utils.py` (prompt templates, fallback compositor)
-- `src/generative/mask_utils.py` (expansion, overlay generation)
+- `src/generative/utils.py` (added)
+- `src/generative/mask_utils.py` (added)
 - `src/generative/controlnet.py` (later) depth preprocessing
 - `docs/guides/CONTROLNET_SETUP.md` (later)
 

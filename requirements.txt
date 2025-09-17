@@ -14,6 +14,7 @@ accelerate>=0.21.0          # GPU acceleration and optimization
 controlnet-aux>=0.0.6       # ControlNet preprocessing utilities
 xformers                    # Memory optimization for Stable Diffusion
 pillow>=9.0.0              # Enhanced image processing
+scikit-image               # SSIM and image quality metrics
 
 # Utilities for visualization and debugging
 matplotlib

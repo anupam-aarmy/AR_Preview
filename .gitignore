@@ -60,3 +60,10 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Visual Studio workspace state
+.vs/
+*.db
+*.opendb
+*.VC.db
+*.VC.opendb
