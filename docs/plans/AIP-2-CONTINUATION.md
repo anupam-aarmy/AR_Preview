@@ -34,14 +34,17 @@ Date: 2025-09-17
 | 9 | ControlNet Depth Integration | Structure guidance | Depth map generated & used |
 
 ### 3.1 Implemented (Current Session)
-- Added fast mode flag `--fast` (downscale + scheduler swap + step reduction)
-- Added CLI args: `--steps`, `--room-image`, `--product-type`, `--width`, `--height`, `--no-save-overlays`, `--no-fallback`, `--output-dir`
-- Introduced mask expansion + feathering and overlay saves (`output/task2_generative/overlays/`)
-- Added structured metadata JSON per run (`output/task2_generative/run_metadata.json` and per-product metadata files)
-- Refactored prompts to centralized templates (`src/generative/utils.py`)
-- Scheduler automatically switches to `DPMSolverMultistepScheduler` in fast mode (best-effort)
+- Fast mode flag `--fast` (downscale + scheduler swap + step reduction)
+- Core CLI args (`--steps`, `--room-image`, `--product-type`, `--width`, `--height`, `--no-save-overlays`, `--no-fallback`, `--output-dir`, `--delta-threshold`)
+- Mask expansion + feather + overlays (`output/task2_generative/overlays/`)
+- Structured metadata JSON (`run_metadata.json`, per-product metadata)
+- Centralized prompt templates (`src/generative/utils.py`)
+- DPMSolver scheduler in fast mode
+- SSIM delta detection + synthetic fallback TV compositor
+- Depth module scaffold + ControlNet depth optional integration (`--use-depth --depth-model`)
+- Extended delta metrics: SSIM + MSE + changed pixel ratio
 
-Pending (next iteration): SSIM delta detection + fallback compositor activation, ControlNet depth integration.
+Pending (next iteration): Depth quality tuning, prompt refinement post-depth, documentation for ControlNet setup & benchmarking script.
 
 ## 4. CLI Arguments To Add
 | Arg | Default | Description |
@@ -51,6 +54,9 @@ Pending (next iteration): SSIM delta detection + fallback compositor activation,
 | `--width` / `--height` | auto | Optional forced working resolution |
 | `--save-overlays` | true | Save diagnostic overlay images |
 | `--no-fallback` | false | Disable synthetic TV compositor |
+| `--delta-threshold` | 0.98 | SSIM threshold for change detection |
+| `--use-depth` | false | Enable ControlNet depth conditioning |
+| `--depth-model` | lllyasviel/control_v11f1p_sd15_depth | ControlNet depth model ID |
 
 ## 5. Prompt Templates (Draft)
 ```

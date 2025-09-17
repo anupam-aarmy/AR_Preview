@@ -34,6 +34,11 @@ from src.generative.mask_utils import (
     downscale_for_fast_mode,
     resize_mask,
 )
+from src.generative.controlnet_depth import (
+    get_or_create_depth,
+    depth_to_pil,
+    save_depth_overlay,
+)
 
 # Check if required packages are installed
 def check_dependencies():
@@ -412,6 +417,8 @@ def parse_args():
     parser.add_argument('--no-save-overlays', action='store_true', help='Disable saving diagnostic overlays')
     parser.add_argument('--no-fallback', action='store_true', help='Disable synthetic TV fallback if no change detected')
     parser.add_argument('--delta-threshold', type=float, default=0.98, help='SSIM threshold at/above which area considered unchanged (trigger fallback)')
+    parser.add_argument('--use-depth', action='store_true', help='Enable ControlNet depth conditioning')
+    parser.add_argument('--depth-model', default='lllyasviel/control_v11f1p_sd15_depth', help='ControlNet depth model id')
     parser.add_argument('--output-dir', default='output', help='Base output directory')
     return parser.parse_args()
 
@@ -466,17 +473,47 @@ def main():
 
     wall_mask_work = resize_mask(wall_mask, working_room.shape[:2])
     pipe = choose_scheduler(pipe, cfg.fast)
+
+    # Optional ControlNet depth integration
+    depth_map = None
+    depth_pil = None
+    depth_dir = os.path.join(output_dir, 'task2_generative', 'depth')
+    depth_overlay_path = None
+    if args.use_depth:
+        try:
+            from diffusers import ControlNetModel, StableDiffusionControlNetInpaintPipeline
+            print("🔧 Loading ControlNet depth model ...")
+            controlnet = ControlNetModel.from_pretrained(args.depth_model, torch_dtype=torch.float16 if device=='cuda' else torch.float32)
+            pipe = StableDiffusionControlNetInpaintPipeline.from_pretrained(
+                'runwayml/stable-diffusion-inpainting',
+                controlnet=controlnet,
+                safety_checker=None,
+                requires_safety_checker=False,
+                torch_dtype=torch.float16 if device=='cuda' else torch.float32
+            )
+            if device == 'cuda':
+                pipe = pipe.to(device)
+            pipe = choose_scheduler(pipe, cfg.fast)
+            # compute depth on working room (post-scale)
+            depth_path, depth_map = get_or_create_depth(working_room, depth_dir, device=device)
+            depth_overlay_path = save_depth_overlay(working_room, depth_map, depth_dir)
+            depth_pil = depth_to_pil(depth_map)
+            print(f"✅ Depth map ready: {depth_path}")
+        except torch.cuda.OutOfMemoryError:
+            print("⚠️  OOM while loading ControlNet depth: continuing without depth")
+        except Exception as e:
+            print(f"⚠️  Depth integration failed ({e}); continuing without depth")
     overlays_dir = os.path.join(output_dir, 'task2_generative', 'overlays') if cfg.save_overlays else None
 
     tv_results = {}
     if args.product_type in ("TV", "Both"):
         print("\n🎨 Generating TV size variations (Assignment Task 2 requirement)...")
-        tv_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "TV", cfg, overlays_dir)
+    tv_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "TV", cfg, overlays_dir)
 
     painting_results = {}
     if args.product_type in ("Painting", "Both"):
         print("\n🎨 Generating painting variations...")
-        painting_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "Painting", cfg, overlays_dir)
+    painting_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "Painting", cfg, overlays_dir)
 
     metadata_common = {
         'fast_mode': cfg.fast,
@@ -484,6 +521,9 @@ def main():
         'scale_factor': scale_factor,
         'scheduler': pipe.scheduler.__class__.__name__ if pipe else None,
         'device': device,
+        'depth_enabled': bool(args.use_depth and depth_map is not None),
+        'depth_model': args.depth_model if args.use_depth else None,
+        'depth_overlay': depth_overlay_path,
     }
 
     tv_timestamp = None
@@ -496,22 +536,42 @@ def main():
     # Delta detection + fallback (TV only for now)
     delta_entries = []
     if tv_results:
-        print("\n🔍 Performing SSIM delta detection inside TV masks...")
+        print("\n🔍 Performing SSIM/MSE delta detection inside TV masks...")
         for size_key, data in tv_results.items():
             gen_img = data['image']
             orig_img = working_room
             mask = data.get('expanded_mask', data['mask'])
             score = compute_ssim(orig_img, gen_img, mask)
+            # Compute MSE & changed pixel ratio (grayscale)
+            ys, xs = np.where(mask > 0)
+            if len(xs) > 0 and len(ys) > 0:
+                x1, x2 = xs.min(), xs.max()
+                y1, y2 = ys.min(), ys.max()
+                crop_o = cv2.cvtColor(orig_img[y1:y2+1, x1:x2+1], cv2.COLOR_BGR2GRAY)
+                crop_g = cv2.cvtColor(gen_img[y1:y2+1, x1:x2+1], cv2.COLOR_BGR2GRAY)
+                if crop_o.shape != crop_g.shape:
+                    hmin = min(crop_o.shape[0], crop_g.shape[0])
+                    wmin = min(crop_o.shape[1], crop_g.shape[1])
+                    crop_o = cv2.resize(crop_o, (wmin, hmin))
+                    crop_g = cv2.resize(crop_g, (wmin, hmin))
+                diff = (crop_o.astype(np.float32) - crop_g.astype(np.float32))
+                mse = float(np.mean(diff**2))
+                # changed pixel ratio threshold 12 gray levels difference
+                changed_ratio = float(np.mean(np.abs(diff) > 12.0))
+            else:
+                mse = -1.0
+                changed_ratio = -1.0
             entry = {
                 'size_key': size_key,
                 'description': data['description'],
                 'ssim': score,
+                'mse': mse,
+                'changed_ratio': changed_ratio,
                 'threshold': args.delta_threshold,
                 'fallback_applied': False
             }
             if score != -1 and score >= args.delta_threshold and not cfg.no_fallback:
                 print(f"  ⚠️  SSIM={score:.4f} ≥ {args.delta_threshold} → applying synthetic TV fallback for {size_key}")
-                # Apply fallback to working_room copy region (only masked area)
                 fallback_img = synthetic_tv_fallback(gen_img, mask)
                 data['image'] = fallback_img
                 entry['fallback_applied'] = True

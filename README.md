@@ -18,19 +18,21 @@ Two parallel approaches:
 ### 🔧 Task 2: Generative Pipeline (IN PROGRESS)
 Implemented so far (this branch):
 - Stable Diffusion inpainting pipeline (Hugging Face Diffusers) with GPU/CPU support
+- Optional ControlNet depth guidance (`--use-depth` + `--depth-model lllyasviel/control_v11f1p_sd15_depth`)
 - Fast mode (`--fast`): downscale to <=896px longest side, DPMSolver scheduler swap, step reduction (default 30 → 15) and lighter guidance
 - Centralized prompt + negative prompt templates for TV (see `src/generative/utils.py`)
 - Size variation logic (42" / 55" TV) + painting variants
 - Mask expansion & feathering + diagnostic overlays saved to `output/task2_generative/overlays/`
 - Run metadata & per-product metadata JSON emission
-- CLI flags for flexible experimentation (`--fast --steps --product-type --room-image --width --height --no-save-overlays --no-fallback --delta-threshold`)
+- CLI flags for flexible experimentation (`--fast --steps --product-type --room-image --width --height --no-save-overlays --no-fallback --delta-threshold --use-depth --depth-model`)
 - SSIM delta detection + synthetic fallback TV compositor (guarantees visible output if diffusion produces no change)
+- Extended delta metrics: SSIM + MSE + changed pixel ratio recorded in `delta_report.json`
 
 Pending (next milestones):
-- ControlNet Depth integration for structural conditioning (`--use-depth` planned)
-- Prompt tuning iteration after stable non-fallback TVs >70% of runs
-- Quality metrics expansion (MSE, delta area %) & regression script
-- README merge & polish once TVs render consistently
+- Depth prompt & guidance tuning to reduce fallback frequency further
+- Dedicated ControlNet setup & troubleshooting guide
+- Prompt refinement for painting variants & shadow realism
+- Benchmark/regression script for metrics over sample rooms
 ## 📂 Updated Project Structure
 ```
 AR_Preview/
@@ -106,11 +108,15 @@ python generative_pipeline.py
 ```
 Produces outputs in `output/task2_generative/`. If diffusion fails to alter the masked area (SSIM ≥ threshold), a synthetic fallback TV is composited for continuity.
 
-### SSIM & Fallback Detection (What/Why)
-Structural Similarity Index (SSIM) measures how similar two images are (1.0 = identical). We compute SSIM only inside each product mask between the original room and the generated result:
-- If `SSIM >= --delta-threshold` (default 0.98) the model likely made no meaningful change → apply synthetic TV fallback.
-- If `SSIM < threshold` we keep the diffusion output.
-`delta_report.json` summarizes per-size SSIM and whether fallback was applied.
+### Delta Metrics & Fallback (SSIM / MSE / Changed Ratio)
+We compute inside the product mask:
+- SSIM (primary decision metric; high value means little structural change)
+- MSE (raw pixel error — useful for debugging cases where SSIM is ambiguous)
+- Changed pixel ratio (fraction of pixels exceeding a small diff epsilon)
+
+Fallback rule: if `SSIM >= --delta-threshold` (default 0.98) the model likely made no meaningful change → inject synthetic TV (unless `--no-fallback`).
+
+`delta_report.json` now includes for each size: `ssim`, `mse`, `changed_ratio`, and whether fallback applied.
 
 ### Why blank / low-change outputs can occur
 | Factor | Impact |
@@ -122,12 +128,13 @@ Structural Similarity Index (SSIM) measures how similar two images are (1.0 = id
 | Full-resolution generation | Higher compute + slower exploratory loop |
 
 ### Mitigation Plan
-1. Fast mode (+) implemented
-2. Overlays + SSIM delta (+) implemented (MSE pending)
-3. Refined prompt template (initial pass) (+) in `utils.py`
-4. Mask expansion & feather (+) implemented
-5. Synthetic fallback compositor (+) implemented
-6. ControlNet depth (pending)
+1. Fast mode (✅ implemented)
+2. Overlays + delta metrics (✅ SSIM, MSE, changed ratio implemented)
+3. Prompt template (✅ initial pass; further tuning pending)
+4. Mask expansion & feather (✅ implemented)
+5. Synthetic fallback compositor (✅ implemented)
+6. ControlNet depth (✅ initial integration; tuning pending)
+7. Benchmark script (🕒 pending)
 
 ## 🖥️ GPU Migration (Summary)
 A full Windows Azure + GCP step-by-step guide will be added at: `docs/guides/GPU_SETUP_WINDOWS.md` (created in this branch). Use 1× NVIDIA 8–12 GB VRAM (e.g. T4/RTX A4000/RTX 3060). See guide for drivers, CUDA Torch install, and validation script `sd_environment_test.py`.
@@ -141,11 +148,11 @@ A full Windows Azure + GCP step-by-step guide will be added at: `docs/guides/GPU
 ## 🔍 Current Issues
 | ID | Issue | Status | Planned Fix |
 |----|-------|--------|-------------|
-| G1 | Blank TV generations | Open | Fast mode + prompt/mask tuning |
-| G2 | No ControlNet | Open | Add after visible baseline |
-| G3 | Slow iteration (CPU) | Open | Migrate to GPU / fast mode |
-| G4 | README outdated claims | Addressed | Updated to WIP status |
-| G5 | Lack of diagnostic overlays | Open | Implement mask overlay save |
+| G1 | Residual fallback frequency | In Progress | Depth tuning + prompt adjustments |
+| G2 | Depth guidance quality variance | In Progress | Tune guidance scale & prompt qualifiers |
+| G3 | Slow iteration (CPU) | Open | Migrate to GPU / refine fast mode defaults |
+| G4 | Benchmark automation missing | Open | Add regression / metrics script |
+| G5 | Shadow / lighting realism | Open | Add light/shadow prompt tokens + optional relight pass |
 
 ## 🔄 Next Engineering Steps
 1. Add fast mode CLI args (`--fast`, `--steps`, `--downscale`)
