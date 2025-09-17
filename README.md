@@ -16,20 +16,21 @@ Two parallel approaches:
 - Entry Point: `main.py`
 
 ### 🔧 Task 2: Generative Pipeline (IN PROGRESS)
-Current state (this branch):
-- Stable Diffusion inpainting pipeline loads and runs on CPU
-- Reuses SAM wall mask to restrict product placement region
-- Generates two size variants (intended 42" / 55" TV) but output currently unchanged (blank wall)
-- Missing ControlNet conditioning & realism enhancements
-- No fast mode (30 steps at full resolution → ~30 min per image on CPU)
+Implemented so far (this branch):
+- Stable Diffusion inpainting pipeline (Hugging Face Diffusers) with GPU/CPU support
+- Fast mode (`--fast`): downscale to <=896px longest side, DPMSolver scheduler swap, step reduction (default 30 → 15) and lighter guidance
+- Centralized prompt + negative prompt templates for TV (see `src/generative/utils.py`)
+- Size variation logic (42" / 55" TV) + painting variants
+- Mask expansion & feathering + diagnostic overlays saved to `output/task2_generative/overlays/`
+- Run metadata & per-product metadata JSON emission
+- CLI flags for flexible experimentation (`--fast --steps --product-type --room-image --width --height --no-save-overlays --no-fallback --delta-threshold`)
+- SSIM delta detection + synthetic fallback TV compositor (guarantees visible output if diffusion produces no change)
 
-Planned improvements (next commits):
-- Fast debug mode (downscale + 12–15 steps + DPMSolver scheduler)
-- Prompt & negative prompt refinement
-- Mask enlargement + overlay diagnostics
-- Fallback synthetic TV rendering if diffusion fails
-- ControlNet depth / canny integration (post fast-mode stabilization)
-
+Pending (next milestones):
+- ControlNet Depth integration for structural conditioning (`--use-depth` planned)
+- Prompt tuning iteration after stable non-fallback TVs >70% of runs
+- Quality metrics expansion (MSE, delta area %) & regression script
+- README merge & polish once TVs render consistently
 ## 📂 Updated Project Structure
 ```
 AR_Preview/
@@ -46,18 +47,51 @@ AR_Preview/
     task2_generative/{masks,generated,comparisons}
   main.py                 # Task 1
   generative_pipeline.py  # Task 2 (draft)
+### Current Limitations & Immediate Plan
+| Gap | Status | Planned Action |
+|-----|--------|----------------|
+| Visible product generation | Fallback may still trigger frequently | Integrate ControlNet and prompt refine to reduce fallback rate |
+| Fallback rendering | Wired (SSIM-triggered) | Improve synthetic reflection realism (optional) |
+| ControlNet depth guidance | Not implemented | Add optional `--use-depth` flag + preprocessing module |
+| Prompt tuning | Initial template only | Iterate once structural change appears |
+| Evaluation metrics | SSIM + fallback JSON only | Add MSE + changed pixel ratio |
   src/pipeline.py         # Alternate deterministic interface
 ```
 
 ## 🚀 Quick Start (Deterministic Pipeline)
 ```bash
 git clone https://github.com/anupam-aarmy/AR_Preview.git
+## 🔄 Next Engineering Steps
+1. Integrate optional ControlNet depth (`--use-depth`) preprocessing
+2. Prompt refinement & negative prompt balancing (reduce over-suppression)
+3. Add MSE + changed pixel percentage to `delta_report.json`
+4. Optimize fallback aesthetics (parameterize bezel thickness, reflection strength)
+5. Regression pass: ensure Task 1 outputs unchanged
+6. Documentation pass then candidate-ready demo set
 cd AR_Preview
+Produces experimental outputs in `output/task2_generative/` (may still appear blank until delta/fallback stage is added).
 ython -m venv venv
 # Windows PowerShell:  .\\venv\\Scripts\\Activate.ps1
 # Bash (Git Bash):     source venv/Scripts/activate
 pip install -r requirements.txt
-python download_sam.py
+## 🧬 Generative Pipeline Usage
+Basic run (TV + Painting, quality mode):
+```bash
+python generative_pipeline.py
+```
+Fast debug (recommended GPU/early tuning):
+```bash
+python generative_pipeline.py --fast --product-type TV --steps 15
+```
+TV only, no overlays, custom resolution:
+```bash
+python generative_pipeline.py --product-type TV --width 768 --height 512 --no-save-overlays
+```
+Painting only, keep high steps:
+```bash
+python generative_pipeline.py --product-type Painting --steps 28
+```
+Inspect overlays & masks under `output/task2_generative/overlays/` and `masks/`.
 python main.py
 ```
 
@@ -70,9 +104,15 @@ python main.py
 ```bash
 python generative_pipeline.py
 ```
-Produces (currently blank) outputs in `output/task2_generative/`.
+Produces outputs in `output/task2_generative/`. If diffusion fails to alter the masked area (SSIM ≥ threshold), a synthetic fallback TV is composited for continuity.
 
-### Why outputs are blank now
+### SSIM & Fallback Detection (What/Why)
+Structural Similarity Index (SSIM) measures how similar two images are (1.0 = identical). We compute SSIM only inside each product mask between the original room and the generated result:
+- If `SSIM >= --delta-threshold` (default 0.98) the model likely made no meaningful change → apply synthetic TV fallback.
+- If `SSIM < threshold` we keep the diffusion output.
+`delta_report.json` summarizes per-size SSIM and whether fallback was applied.
+
+### Why blank / low-change outputs can occur
 | Factor | Impact |
 |--------|--------|
 | CPU-only inference | 30 min per run prevents iterative tuning |
@@ -82,12 +122,12 @@ Produces (currently blank) outputs in `output/task2_generative/`.
 | Full-resolution generation | Higher compute + slower exploratory loop |
 
 ### Mitigation Plan
-1. Implement fast mode (downscale copy, 15 steps, DPMSolverMultistep)
-2. Add mask overlays & change-detection (SSIM/MSE) logging
-3. Introduce refined prompt template with balanced negatives
-4. Enlarge + softly feather mask; ensure multiples of 8
-5. Add fallback TV compositor (parametric bezel + dark panel) if diffusion delta < threshold
-6. After stable visible TVs → integrate ControlNet depth model
+1. Fast mode (+) implemented
+2. Overlays + SSIM delta (+) implemented (MSE pending)
+3. Refined prompt template (initial pass) (+) in `utils.py`
+4. Mask expansion & feather (+) implemented
+5. Synthetic fallback compositor (+) implemented
+6. ControlNet depth (pending)
 
 ## 🖥️ GPU Migration (Summary)
 A full Windows Azure + GCP step-by-step guide will be added at: `docs/guides/GPU_SETUP_WINDOWS.md` (created in this branch). Use 1× NVIDIA 8–12 GB VRAM (e.g. T4/RTX A4000/RTX 3060). See guide for drivers, CUDA Torch install, and validation script `sd_environment_test.py`.
