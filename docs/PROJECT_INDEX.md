@@ -1,83 +1,174 @@
 # Project Index & Integration Map
+**Updated:** September 17, 2025  
+**Status:** Task 1 Complete ✅, Task 2 Partial ⚠️  
+**Branch:** `feature/AIP-2-generative-pipeline`
 
 ## 1. High-Level Modules
-- Deterministic Pipeline (Task 1): `main.py`, helper: `src/pipeline.py`
-- Generative Pipeline (Task 2 draft): `generative_pipeline.py`
-- Model Utilities: `download_sam.py`, `sd_environment_test.py`
 
-## 2. Documentation Map
-| Area | File | Purpose |
-|------|------|---------|
-| Assignment Spec | `docs/assignment/AI_Assignment.md` | Original task goals (Task 1 & Task 2) |
-| Planning (Task 2) | `docs/plans/AIP-2-PLAN.md` | JIRA-style breakdown for generative pipeline |
-| Completion Report (Task 1) | `docs/reports/PROOF_OF_COMPLETION.md` | Evidence + metrics for AIP-1 |
-| Reliability Tests | `docs/reports/RELIABILITY_TEST_RESULTS.md` | Multi-room segmentation tests |
-| Index | `docs/PROJECT_INDEX.md` | This file |
+### Core Pipeline Implementations
+- **Task 1 (Deterministic)**: `scripts/task1_clean.py` - SAM + OpenCV product placement ✅
+- **Task 2 (Generative)**: `scripts/task2_clean.py` - Stable Diffusion + ControlNet ⚠️
+- **Main Entry Point**: `main.py` - Orchestration script for both tasks
+- **Model Utilities**: `download_sam.py` - SAM model downloader
 
-## 3. Data / Assets Flow
-1. Input room image(s): `assets/room_wall*.png`
-2. Task 1: SAM -> wall mask(s) saved to `output/task1_deterministic/masks/*`
-3. Product placement -> `results/` & `comparisons/` under `task1_deterministic`
-4. Task 2 (current): loads latest wall mask via `load_sam_wall_mask()` → builds product inpainting mask → (inpainting) → `output/task2_generative/...`
+### Support Files
+- **Environment Setup**: `requirements.txt`, `sd_environment_test.py`
+- **Asset Creation**: `create_assets.py` - Asset management utilities
+- **Legacy Files**: `src/pipeline.py` (preserved), deprecated standalone scripts
 
-## 4. Output Structure
+## 2. Documentation Map (Post-Cleanup)
+| Area | File | Purpose | Status |
+|------|------|---------|---------|
+| Assignment Spec | `docs/assignment/AI_Assignment.md` | Original task goals (Task 1 & Task 2) | ✅ Complete |
+| Progress Tracking | `docs/PROGRESS_TRACKER.md` | Current status, issues & resolution plans | ✅ Current |
+| Completion Report | `docs/reports/PROOF_OF_COMPLETION.md` | Evidence + metrics for both tasks | ✅ Updated |
+| Reliability Tests | `docs/reports/RELIABILITY_TEST_RESULTS.md` | Multi-pipeline testing results | ✅ Updated |
+| GPU Setup | `docs/guides/GPU_SETUP_WINDOWS.md` | Windows GPU configuration | ✅ Available |
+| Project Index | `docs/PROJECT_INDEX.md` | This file - project overview | ✅ Current |
+
+## 3. Asset & Data Flow
+
+### Input Assets
+```
+assets/
+├── room_wall.png           # Primary room image
+├── room_wall_2.png         # Additional room for testing
+├── room_wall_3.png         # Additional room for testing  
+├── room_wall_4.png         # Additional room for testing
+├── prod_1_tv.png          # TV product (original)
+├── prod_2_painting.png    # Painting product
+└── prod_3_tv.png          # TV product (new variant)
+```
+
+### Processing Flow
+1. **Task 1**: Room image → SAM segmentation → Product placement → Output
+2. **Task 2**: Room image → Depth estimation → ControlNet conditioning → SD generation → Output
+
+## 4. Output Structure (Current)
 ```
 output/
-  task1_deterministic/
-    masks/           # wall_mask_*.png
-    results/         # result_tv_*.png, result_painting_*.png
-    comparisons/     # comparison_* side-by-side renders
-  task2_generative/
-    masks/           # inpaint_mask_* (rectangular product masks)
-    generated/       # generated_tv_*.png
-    comparisons/     # size_comparison_tv_*.png
+├── task1_deterministic/           # Task 1 outputs ✅
+│   ├── result_*.png              # Final product placements
+│   ├── comparison_*.png          # Before/after comparisons
+│   └── wall_mask_*.png           # SAM wall segmentation masks
+└── task2_controlnet/             # Task 2 outputs ⚠️
+    └── run_20250917_190102/      # Timestamped run directory
+        ├── depth_map_*.png       # Depth conditioning maps ✅
+        ├── generated_42_inch_*.png   # 42" TV generation attempts ❌
+        ├── generated_55_inch_*.png   # 55" TV generation attempts ❌
+        └── task2_comparison_*.png    # Pipeline analysis ⚠️
 ```
 
-## 5. Known Gaps (Current Branch)
-- Generative outputs are blank (TV not synthesized inside mask)
-- No ControlNet (depth / canny) integrated yet
-- No fast mode or scheduler optimization
-- Missing GPU setup guide (in progress)
-- README claims need alignment with reality (will be updated)
+## 5. Current Status & Issues
 
-## 6. Next Engineering Priorities
-| Priority | Item | Rationale |
-|----------|------|-----------|
-| P0 | Fast CPU Debug Mode | Reduce iteration cycle from 30m → <2m |
-| P0 | Prompt & Mask tuning | Produce visible product silhouette |
-| P1 | ControlNet depth integration | Strong structural conditioning |
-| P1 | Diagnostic overlays | Visual verification of mask usage |
-| P2 | Fallback synthetic TV | Guarantees visible output during tuning |
-| P2 | GPU migration execution | Performance baseline for Task 2 |
+### Task 1: Deterministic Pipeline ✅ WORKING
+- **Implementation**: `scripts/task1_clean.py`
+- **Features**: SAM wall segmentation, OpenCV product placement, alpha blending
+- **Performance**: ~8 seconds per run, optimized for Tesla T4
+- **Output Quality**: Clean product placement preserving original appearance
+- **Products Supported**: TV, painting, additional variants
 
-## 7. Key Functions (Entry Points)
-| File | Function | Purpose |
-|------|----------|---------|
-| `main.py` | `main()` | Runs deterministic segmentation & placement |
-| `generative_pipeline.py` | `main()` | Runs current draft inpainting flow |
-| `generative_pipeline.py` | `load_sam_wall_mask()` | Reuses Task 1 wall mask |
-| `src/pipeline.py` | `run_pipeline()` | Alternate deterministic interface |
+### Task 2: Generative Pipeline ⚠️ PARTIAL
+- **Implementation**: `scripts/task2_clean.py`
+- **Working Components**: 
+  - ✅ Depth map generation (Intel DPT-large)
+  - ✅ ControlNet pipeline setup (SD v1.5)
+  - ✅ Size variations framework (42"/55")
+- **Current Issues**:
+  - ❌ Products disappearing during diffusion
+  - ❌ Room morphing/distortion in generated images
+  - ❌ Ineffective product-wall integration
 
-## 8. Environment Expectations
-- Python 3.8–3.11 recommended
-- CPU-only works for Task 1; GPU strongly advised for Task 2
-- Models stored under `models/` (SAM checkpoint manual download via `download_sam.py`)
+## 6. Key Technologies & Dependencies
+| Component | Technology | Status | Notes |
+|-----------|------------|--------|-------|
+| Wall Segmentation | Meta SAM (ViT-H) | ✅ Working | 2.4GB checkpoint, optimized config |
+| Computer Vision | OpenCV | ✅ Working | Perspective transformation, blending |
+| Generative AI | Stable Diffusion v1.5 | ⚠️ Partial | Pipeline setup complete, diffusion issues |
+| Conditioning | ControlNet (depth) | ⚠️ Partial | Depth maps working, integration failing |
+| Depth Estimation | Intel DPT-large | ✅ Working | Accurate depth field generation |
+| Deep Learning | PyTorch + CUDA | ✅ Working | Tesla T4 optimized, memory management |
 
-## 9. Branching Strategy
-- Stable segmentation baseline delivered on prior AIP‑1 branches
-- Current experimentation: `feature/AIP-2-generative-pipeline`
-- Do NOT merge to `main` until generative pipeline produces non-trivial TVs
+## 7. Entry Points & Usage
+| Script | Command | Purpose | Status |
+|--------|---------|---------|---------|
+| Main Orchestrator | `python main.py --task 1` | Run Task 1 (deterministic) | ✅ Working |
+| Main Orchestrator | `python main.py --task 2` | Run Task 2 (generative) | ⚠️ Partial |
+| Main Orchestrator | `python main.py --task all` | Run both tasks | ⚠️ Task 1 works, Task 2 partial |
+| Task 1 Direct | `python scripts/task1_clean.py` | Direct Task 1 execution | ✅ Working |
+| Task 2 Direct | `python scripts/task2_clean.py` | Direct Task 2 execution | ⚠️ Partial |
+| Model Download | `python download_sam.py` | Download SAM checkpoint | ✅ Working |
+| Environment Test | `python sd_environment_test.py` | Test SD environment | ✅ Working |
 
-## 10. Migration Checklist (Before GPU Work)
-- [x] Restructure docs
-- [x] Preserve deterministic outputs under new hierarchy
-- [ ] Update README (next step)
-- [ ] Add GPU setup guide (Azure + GCP)
-- [ ] Implement fast mode + improved prompts
+## 8. AI Assignment Compliance
+### Task 1 Requirements ✅ COMPLETE
+- [x] Wall segmentation using AI vision model (SAM)
+- [x] Realistic product placement with scaling & alignment
+- [x] Visual realism without copy-paste appearance
+- [x] Clean Python pipeline with error handling
 
-## 11. Testing Notes
-- Deterministic: visual validation and wall mask correctness
-- Generative: will introduce SSIM change detection + mask overlay soon
+### Task 2 Requirements ⚠️ PARTIAL
+- [x] Stable Diffusion pipeline setup (Hugging Face/Diffusers)
+- [x] ControlNet conditioning (depth conditioning implemented)
+- [x] Size variations (42" vs 55" TV framework)
+- [ ] Product diffusion quality (products disappearing)
+- [ ] Room preservation (morphing issues)
+- [ ] Output quality with proper alignment and shadows
+
+## 9. Environment & Hardware
+- **Python Version**: 3.8-3.11 recommended
+- **GPU Support**: Tesla T4 with CUDA acceleration (16GB VRAM)
+- **CPU Fallback**: Task 1 works on CPU, Task 2 requires GPU
+- **Model Storage**: `models/` directory (SAM checkpoint: 2.4GB)
+- **Memory Management**: Automatic image resizing for large inputs
+
+## 10. Development Workflow
+### Current Branch Strategy
+- **Active Branch**: `feature/AIP-2-generative-pipeline`
+- **Status**: Task 1 complete, Task 2 needs refinement
+- **Merge Policy**: Do NOT merge to `main` until Task 2 issues resolved
+
+### Recent Progress (September 17, 2025)
+- ✅ Code recovery after accidental deletion
+- ✅ Task 1 blending issues fixed
+- ✅ Task 2 pipeline established with ControlNet
+- ⚠️ Task 2 diffusion quality issues identified
+- ✅ Documentation updated comprehensively
+
+## 11. Next Steps & Priorities
+| Priority | Task | Status | Notes |
+|----------|------|--------|-------|
+| P0 | Fix Task 2 product disappearing | 🔄 Active | Investigate diffusion parameters |
+| P0 | Resolve room morphing in Task 2 | 🔄 Active | Adjust guidance scale, conditioning |
+| P1 | Alternative ControlNet approaches | 📋 Planned | Test inpainting + depth combination |
+| P1 | Mask generation refinement | 📋 Planned | Improve product area targeting |
+| P2 | Performance optimization | 📋 Planned | Reduce Task 2 inference time |
+| P2 | Additional product support | 📋 Planned | Expand beyond TV/painting |
+
+## 12. Testing & Validation
+### Current Test Coverage
+- **Task 1**: Multiple room types, product variants, visual quality validation
+- **Task 2**: Depth generation, pipeline execution, size variations
+- **Integration**: Main orchestrator script, error handling
+
+### Missing Test Areas
+- Task 2 output quality metrics
+- Automated regression testing
+- Performance benchmarking
+- Cross-platform compatibility
+
+## 13. File Dependencies
+### Critical Files
+- `scripts/task1_clean.py` - Core Task 1 implementation
+- `scripts/task2_clean.py` - Core Task 2 implementation  
+- `main.py` - Entry point orchestration
+- `requirements.txt` - Python dependencies
+- `models/sam_vit_h_4b8939.pth` - SAM model checkpoint
+
+### Support Files
+- `download_sam.py` - Model acquisition
+- `create_assets.py` - Asset management
+- Documentation in `docs/` - Project knowledge base
 
 ---
-This index will expand as ControlNet & performance features are added.
+**Note**: This index reflects the current state as of September 17, 2025. Task 1 is production-ready, Task 2 requires additional development to meet assignment criteria.

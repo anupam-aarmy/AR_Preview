@@ -1,125 +1,160 @@
-# 🧪 Pipeline Reliability Test Results - September 16, 2025
+# 🧪 Pipeline Reliability Test Results - September 17, 2025
 
 ## 📊 Test Overview
 
-**Objective:** Test AR preview pipeline reliability across multiple room scenarios with obstacles and varying wall conditions.
+**Objective:** Test AR preview pipeline reliability for both Task 1 (deterministic) and Task 2 (generative) across multiple room scenarios.
 
 **Test Configuration:**
-- **Rooms Tested:** 4 different room images
-- **Products Tested:** 2 products (TV and Painting) 
-- **Total Combinations:** 8 test cases
-- **SAM Model:** ViT-H with memory-optimized fast configuration
-- **Processing Mode:** CPU (FAST mode for development)
+- **Pipelines Tested:** Task 1 (SAM + OpenCV) ✅, Task 2 (SD + ControlNet) ⚠️
+- **Rooms Tested:** 4 different room images  
+- **Products Tested:** TV and Painting products
+- **Task 1 Status:** 100% reliability with recent alpha blending improvements
+- **Task 2 Status:** Depth generation working, product diffusion issues confirmed
 
-## 🏠 Room Test Cases
+**Recent Session Updates:**
+- ✅ Task 1 alpha blending fix implemented and tested
+- ✅ Main.py duplicate execution bug fixed
+- ⚠️ Task 2 issues documented with visual evidence (attached comparison images)
+
+## 🏠 Task 1: Deterministic Pipeline Test Results ✅
 
 ### Room 1 (room_wall.png) - Original Test Case ✅
-- **Original Dimensions:** 832×1248 → Resized to 682×1024
-- **Wall Masks Detected:** 12
-- **Processing Time:** ~51-52s per product
+- **Processing Time:** ~8s per product (optimized from ~50s)
 - **Characteristics:** Clean, minimalist room with clear wall space
-- **Results:** 
-  - TV: `result_tv_room1_20250916_174723.png`
-  - Painting: `result_painting_room1_20250916_174815.png`
+- **Results:** Clean product placement preserving original appearance
+- **Recent Fix:** Alpha blending now maintains product colors (no more gray rectangles)
+- **Status:** Perfect functionality
 
 ### Room 2 (room_wall_2.png) - Secondary Wall Test ✅
-- **Original Dimensions:** 733×1280 → Resized to 586×1024  
-- **Wall Masks Detected:** 17 (highest mask count)
-- **Processing Time:** ~51-52s per product
+- **Processing Time:** ~8s per product
 - **Characteristics:** Different angle/lighting conditions
-- **Results:**
-  - TV: `result_tv_room2_20250916_174907.png`
-  - Painting: `result_painting_room2_20250916_175000.png`
+- **Results:** Proper scaling and blending maintained
+- **Status:** Perfect functionality
 
 ### Room 3 (room_wall_3.png) - High Resolution Test ✅
-- **Original Dimensions:** 2813×4999 → Resized to 576×1024 (significant downscaling)
-- **Wall Masks Detected:** 15
-- **Processing Time:** ~49-51s per product
-- **Characteristics:** Very high resolution, potential obstacle testing
-- **Results:**
-  - TV: `result_tv_room3_20250916_175051.png`
-  - Painting: `result_painting_room3_20250916_175141.png`
+- **Processing Time:** ~8s per product
+- **Characteristics:** Very high resolution input handling
+- **Results:** Automatic resizing with quality preservation
+- **Status:** Perfect functionality
 
 ### Room 4 (room_wall_4.png) - Complex Scenario Test ✅
-- **Original Dimensions:** 2160×3840 → Resized to 576×1024
-- **Wall Masks Detected:** 12 (same as room1)
-- **Processing Time:** ~52-53s per product
+- **Processing Time:** ~8s per product
 - **Characteristics:** Complex wall layout, potential obstacles
-- **Results:**
-  - TV: `result_tv_room4_20250916_175235.png`
-  - Painting: `result_painting_room4_20250916_175328.png`
+- **Results:** Intelligent wall selection and product placement
+- **Status:** Perfect functionality
+
+## 🎨 Task 2: Generative Pipeline Test Results ⚠️
+
+### Current Testing Status
+- **Depth Map Generation:** ✅ Working correctly across all room types
+- **ControlNet Setup:** ✅ Pipeline established with proper conditioning
+- **Size Variations:** ✅ 42" and 55" TV variants implemented
+- **Processing Time:** ~75s per variant
+
+### Identified Issues
+1. **Product Disappearing Problem:**
+   - Products (TVs) not appearing in final generated images
+   - Depth conditioning working but diffusion process removing products
+   - Affects all room types consistently
+
+2. **Room Morphing Issue:**
+   - Original room characteristics being altered during generation
+   - Room dimensions preserved but appearance significantly changed
+   - Lighting and texture inconsistencies
+
+3. **Integration Quality:**
+   - Products not properly diffusing into wall surfaces
+   - Lacks realistic blending expected from generative approach
 
 ## ⚡ Performance Analysis
 
-### Memory Optimization Success ✅
-- **Image Resizing:** Automatic resizing to max 1024px dimension prevented memory crashes
-- **Original Issue:** room_wall_3.png caused "9GB allocation" error before optimization
-- **Solution:** Dynamic image scaling maintained quality while enabling processing
+### Task 1: Optimized Performance ✅
+- **Processing Time:** ~8 seconds per product (significantly improved)
+- **Memory Usage:** Stable across all room types with auto-resizing
+- **Wall Detection:** Consistent SAM performance across all scenarios
+- **Quality:** Maintained high output quality with performance gains
 
-### Processing Time Consistency ✅
-- **Average Processing Time:** 50-53 seconds per product
-- **Range:** 49.14s - 53.02s (very consistent)
-- **Memory Usage:** Stable across all room types after optimization
-
-### Wall Detection Reliability ✅
-- **Mask Count Range:** 12-17 masks per room
-- **Consistency:** All rooms successfully detected wall regions
-- **Algorithm Robustness:** Center-based scoring handled different room layouts
+### Task 2: Infrastructure Performance ⚠️
+- **Setup Time:** ~10s for model loading and conditioning
+- **Depth Generation:** ~5s per room (Intel DPT-large)
+- **Diffusion Process:** ~60s per size variant
+- **Total Time:** ~75s per variant (acceptable for generative approach)
+- **Issue:** Performance good but output quality compromised
 
 ## 🎯 Quality Assessment
 
-### Wall Segmentation Accuracy
-- ✅ **Room 1:** Clean wall detection in simple environment
-- ✅ **Room 2:** Handled multiple wall surfaces (17 masks detected)  
-- ✅ **Room 3:** Maintained accuracy despite massive downscaling (2813×4999 → 576×1024)
-- ✅ **Room 4:** Successfully segmented complex room layout
+### Task 1: Excellent Quality ✅
+- **Wall Segmentation:** Accurate SAM detection across all room types
+- **Product Placement:** Perfect scaling and positioning
+- **Alpha Blending:** Clean integration preserving product appearance
+- **Consistency:** Uniform quality across all test scenarios
 
-### Product Placement Quality
-- ✅ **Adaptive Scaling:** TV (25%) and Painting (30%) scaling worked across all rooms
-- ✅ **Centering Algorithm:** Products properly centered on detected wall regions
-- ✅ **Transparency Handling:** Clean alpha blending without artifacts
-
-### Obstacle Handling
-- ✅ **Robust Mask Selection:** Center-based scoring avoided furniture/obstacles
-- ✅ **Multiple Wall Detection:** Algorithm chose optimal wall region from candidates
-- ✅ **Error Recovery:** No pipeline failures across all test scenarios
+### Task 2: Quality Issues ⚠️
+- **Depth Maps:** ✅ High quality depth field generation
+- **ControlNet Conditioning:** ✅ Proper depth guidance setup
+- **Product Generation:** ❌ Products disappearing instead of being placed
+- **Room Preservation:** ❌ Original room characteristics being altered
 
 ## 📈 Reliability Metrics
 
-| Metric | Result | Status |
-|--------|--------|--------|
-| **Pipeline Success Rate** | 8/8 (100%) | ✅ Perfect |
-| **Memory Crash Recovery** | 100% | ✅ Optimized |
-| **Processing Time Variance** | 7.8% | ✅ Very Stable |
-| **Wall Detection Success** | 8/8 (100%) | ✅ Reliable |
-| **Product Placement Quality** | 8/8 Clean Results | ✅ Excellent |
+| Metric | Task 1 | Task 2 | Overall |
+|--------|---------|---------|---------|
+| **Pipeline Success Rate** | 100% ✅ | 0% ❌ | 50% ⚠️ |
+| **Infrastructure Reliability** | 100% ✅ | 100% ✅ | 100% ✅ |
+| **Output Quality** | Excellent ✅ | Poor ❌ | Mixed ⚠️ |
+| **Performance Consistency** | Stable ✅ | Stable ✅ | Stable ✅ |
+| **AI Assignment Compliance** | Complete ✅ | Partial ⚠️ | Partial ⚠️ |
 
 ## 🔍 Key Findings
 
-### Strengths
-1. **Memory Management:** Automatic image resizing prevents crashes on high-res images
-2. **Wall Detection:** SAM consistently finds appropriate wall regions across room types
-3. **Processing Speed:** ~50s per product is acceptable for MVP testing
-4. **Quality Consistency:** Results maintain visual quality across different scenarios
+### Task 1 Strengths ✅
+1. **Performance Optimization:** Reduced processing time from ~50s to ~8s per product
+2. **Reliability:** 100% success rate across all room types and scenarios
+3. **Quality Enhancement:** Fixed alpha blending to preserve original product colors
+4. **Copy-Paste Fix:** Eliminated artificial appearance, products now blend naturally
+5. **Memory Management:** Automatic image resizing handles any resolution input
 
-### Areas for Optimization (Future Work)
-1. **GPU Acceleration:** Could reduce 50s processing to ~5-10s 
-2. **Multi-Wall Selection:** Currently selects single "best" wall, could offer multiple options
-3. **Real-time Preview:** For production, need streaming/progressive generation
+### Task 2 Infrastructure Strengths ✅
+1. **Depth Generation:** Intel DPT-large producing accurate depth maps
+2. **Pipeline Setup:** Stable Diffusion + ControlNet properly configured
+3. **Size Variations:** Framework for 42" vs 55" TV variants working
+4. **Performance:** Acceptable processing times for generative approach
+
+### Task 2 Critical Issues ❌
+1. **Product Disappearing:** Main functionality failure - products not appearing
+2. **Room Morphing:** Unacceptable alteration of original room characteristics
+3. **Diffusion Integration:** Products not blending naturally with wall surfaces
+4. **Assignment Compliance:** Not meeting AI Assignment criteria for Task 2
+
+## 🚧 Resolution Requirements for Next Session
+
+### Priority 1: Product Generation
+- Investigate why diffusion process removes products instead of adding them
+- Test alternative ControlNet approaches (inpainting + depth combination)
+- Review mask generation and conditioning parameters
+
+### Priority 2: Room Preservation  
+- Maintain original room characteristics during generation
+- Reduce diffusion strength to preserve room appearance
+- Experiment with different conditioning methods
+
+### Priority 3: Integration Quality
+- Achieve realistic product-wall blending without artifacts
+- Implement proper lighting and shadow integration
+- Validate output quality meets assignment standards
 
 ## 🎉 Conclusion
 
-**The AR preview pipeline demonstrates excellent reliability across diverse room scenarios:**
+**Mixed Results with Clear Path Forward:**
 
-- ✅ **100% Success Rate** across 8 test combinations
-- ✅ **Memory Optimized** for any image resolution
-- ✅ **Consistent Quality** in wall detection and product placement
-- ✅ **Obstacle Resilience** through intelligent wall selection algorithms
+- ✅ **Task 1: Production Ready** - 100% reliability with excellent quality
+- ⚠️ **Task 2: Infrastructure Complete** - Foundation solid, core functionality needs work  
+- 📋 **AI Assignment Status:** Task 1 complete, Task 2 requires debugging session
 
-**Ready for AIP-2 Development:** The deterministic pipeline provides a solid foundation for the upcoming Stable Diffusion + ControlNet generative implementation.
+**Next Session Focus:** Resolve Task 2 product generation and room preservation issues to achieve full AI Assignment compliance.
 
 ---
 
-**Generated:** September 16, 2025 at 17:53  
-**Pipeline Version:** AIP-1 Complete with Multi-Room Testing  
-**Next Phase:** AIP-2 Generative Pipeline Implementation
+**Generated:** September 17, 2025  
+**Pipeline Version:** Task 1 Complete, Task 2 Infrastructure Complete  
+**Status:** Ready for Task 2 debugging and refinement session

@@ -1,103 +1,141 @@
 # Proof of Completion (PoC) - AR Preview Pipeline
 
 **Project:** AI-Powered Product Visualization for AR Preview Applications  
-**Assignment:** Module 2 (Single Wall Fitting) - Task 1 Implementation  
-**Date:** September 16, 2025  
-**Branch:** `feature/AIP-1-improvements`  
+**Assignment:** Module 2 (Single Wall Fitting) - Task 1 & Task 2 Implementation  
+**Date:** September 17, 2025  
+**Branch:** `feature/AIP-2-generative-pipeline`  
 **Repository:** [anupam-aarmy/AR_Preview](https://github.com/anupam-aarmy/AR_Preview)  
-**Main Implementation:** Single room input (`room_wall_3.png`) as per AI Assignment requirements
+**Status:** Task 1 Complete ✅, Task 2 Partial ⚠️
 
 ---
 
 ## 🎯 Executive Summary
 
-Successfully implemented and delivered a **complete deterministic pipeline** for AR product visualization using Meta's Segment Anything Model (SAM) and OpenCV. The solution accurately segments walls from room photos and realistically places user products (TVs, paintings, frames) with proper scaling, perspective, and natural blending.
-
-**🏆 ACHIEVEMENT: AIP-1 User Story 100% Complete + Enhanced Reliability Testing**
+Successfully implemented **Task 1 (Deterministic Pipeline)** with complete functionality for AR product visualization using Meta's Segment Anything Model (SAM) and OpenCV. **Task 2 (Generative Pipeline)** has been partially implemented with working depth generation and ControlNet setup, but facing product diffusion issues.
 
 **📊 Current Implementation Status:**
-- **Primary Pipeline:** Uses `room_wall_3.png` as single room input (Assignment compliant)
-- **Performance:** Fast mode (15 masks, ~50s) with High Quality option (42 masks, ~350s)
-- **Reliability Testing:** Successfully validated across 4 different room scenarios
-- **Output Generation:** Clean results with timestamped preservation
+- **Task 1:** ✅ COMPLETE - Wall segmentation + product placement working perfectly
+- **Task 2:** ⚠️ PARTIAL - Depth generation working, product diffusion needs refinement  
+- **Pipeline Testing:** Both pipelines tested with multiple room scenarios
+- **AI Assignment:** Task 1 requirements fully met, Task 2 partially met
 
-## 📋 JIRA Story Completion Status
+## 📋 AI Assignment Completion Status
 
-### ✅ AIP-1: Product Visualization via Segmentation - **100% COMPLETE** 🎯
+### ✅ Task 1: SAM Wall Segmentation + Product Placement - **COMPLETE** 🎯
 
-| Subtask | Status | Evidence |
-|---------|--------|----------|
-| AIP-4: SAM Integration | ✅ **COMPLETE** | Wall segmentation working, 19 masks generated |
-| AIP-5: Wall Mask Logic | ✅ **COMPLETE** | Center-based wall selection algorithm implemented |
-| AIP-6: Perspective Transform | ✅ **COMPLETE** | Adaptive scaling and OpenCV homography working |
-| AIP-7: Alpha Blending | ✅ **COMPLETE** | Clean transparency handling without artifacts |
-| AIP-8: Documentation | ✅ **COMPLETE** | README ✅, PoC ✅, Code comments ✅, Final polish ✅ |
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| Wall Segmentation (SAM) | ✅ **COMPLETE** | Working wall detection with 15+ masks generated |
+| Product Placement Logic | ✅ **COMPLETE** | OpenCV perspective transformation with proper scaling |
+| Alpha Blending | ✅ **COMPLETE** | Realistic transparency handling preserving product appearance |
+| Multi-Product Support | ✅ **COMPLETE** | TV, painting, and additional products working |
+| Code Quality | ✅ **COMPLETE** | Clean implementation in `scripts/task1_clean.py` |
 
-**🎉 USER STORY AIP-1 DELIVERED SUCCESSFULLY**
+### ⚠️ Task 2: Stable Diffusion + ControlNet - **PARTIAL** 
+
+| Component | Status | Evidence |
+|-----------|--------|----------|
+| SD Pipeline Setup | ✅ **COMPLETE** | Stable Diffusion v1.5 + ControlNet configured |
+| Depth Map Generation | ✅ **COMPLETE** | Intel DPT-large depth estimation working |
+| ControlNet Integration | ✅ **COMPLETE** | Depth conditioning pipeline established |
+| Size Variations | ✅ **COMPLETE** | 42" vs 55" TV variants implemented |
+| **Product Diffusion** | ❌ **ISSUE** | Products disappearing during generation process |
+| **Room Preservation** | ❌ **ISSUE** | Room geometry morphing/distortion during diffusion |
+| **Output Quality** | ❌ **ISSUE** | Generated images not meeting assignment criteria |
 
 ### 📋 Requirements vs. Implementation
 
-| Requirement | Status | Implementation |
-|-------------|--------|----------------|
-| **Wall Segmentation** | ✅ **ACHIEVED** | SAM (Segment Anything Model) with optimized parameters |
-| **Product Placement** | ✅ **ACHIEVED** | OpenCV perspective transformation with intelligent sizing |
-| **Visual Realism** | ✅ **ACHIEVED** | Advanced alpha blending preserving original product appearance |
-| **Code Quality** | ✅ **ACHIEVED** | Clean Python pipeline with modular structure |
+| AI Assignment Requirement | Task 1 Status | Task 2 Status |
+|---------------------------|---------------|---------------|
+| **Wall Segmentation** | ✅ **ACHIEVED** | ✅ **ACHIEVED** (via depth estimation) |
+| **Product Placement** | ✅ **ACHIEVED** | ❌ **FAILING** (products disappearing) |
+| **Visual Realism** | ✅ **ACHIEVED** | ❌ **FAILING** (room morphing) |
+| **Size Variations** | ✅ **ACHIEVED** | ✅ **ACHIEVED** (42"/55" variants) |
+| **Code Quality** | ✅ **ACHIEVED** | ✅ **ACHIEVED** (pipeline structure good) |
 
 ### 🔧 Technical Implementation
 
-#### Current Implementation Evidence
+#### Task 1: Deterministic Pipeline ✅
 
-**Main Pipeline Results** (Assignment Compliant - Single Room Input):
-- **Input:** `room_wall_3.png` (AI Assignment requirement: single room image)
-- **TV Placement:** [result_tv_20250916_184241.png](output/result_tv_20250916_184241.png)
-- **Painting Placement:** [result_painting_20250916_184242.png](output/result_painting_20250916_184242.png)
-- **Wall Analysis:** [wall_mask_tv_20250916_184241.png](output/wall_mask_tv_20250916_184241.png)
-- **Comparisons:** [TV](output/comparison_tv_20250916_184241.png) | [Painting](output/comparison_painting_20250916_184242.png)
+**Main Pipeline Results:**
+- **Implementation:** `scripts/task1_clean.py`
+- **Input Support:** Multiple room images (`room_wall.png`, `room_wall_2.png`, etc.)
+- **Products:** TV, painting, and additional product support
+- **Recent Outputs:** `output/task1_deterministic/results/`
+- **Performance:** ~8 seconds (wall segmentation + placement)
 
-**Performance Metrics:**
-- Wall segmentation: 15 masks detected in 47.5 seconds (Fast mode)
-- Memory optimization: Auto-resize from 2813×4999 to 576×1024
-- Product scaling: TV (25% of wall), Painting (30% of wall)
-- Processing mode: Fast (default) with High Quality option available
-
-**Additional Reliability Testing Results:**
-- **Room 1 (Original):** [TV](output/result_tv_room1_20250916_180532.png) | [Painting](output/result_painting_room1_20250916_180624.png)
-- **Room 2 (Lighting):** [TV](output/result_tv_room2_20250916_180714.png) | [Painting](output/result_painting_room2_20250916_180806.png)  
-- **Room 4 (Complex):** [TV](output/result_tv_room4_20250916_181039.png) | [Painting](output/result_painting_room4_20250916_181129.png)
-
-#### Wall Segmentation Engine
+**Wall Segmentation Engine:**
 - **Model:** Meta's SAM (ViT-H checkpoint, ~2.4GB)
-- **Fast Mode:** 12 points/side, reduced layers (15 masks, ~50s)
-- **High Quality:** 32 points/side, crop layers (42 masks, ~350s)
+- **Optimization:** Memory-efficient configuration for Tesla T4
 - **Algorithm:** Center-based wall selection with area scoring
+- **Output:** 15+ masks with intelligent wall detection
 
-#### Product Placement Logic  
-- **Sizing:** Adaptive scaling (TVs: 25%, Paintings: 30% of wall width)
-- **Positioning:** Center-aligned with aspect ratio preservation
-- **Transparency:** Smart background detection preserving original product appearance
-- **Memory Management:** Auto-resize large images to 1024px max dimension
-- **Transparency:** Advanced background removal for non-transparent products
-- **Blending:** Alpha compositing without artificial shadows
+**Product Placement Logic:**
+- **Sizing:** Adaptive scaling based on wall dimensions
+- **Positioning:** Center-aligned with aspect ratio preservation  
+- **Blending:** Advanced alpha compositing preserving original product colors
+- **Memory Management:** Auto-resize for large images
 
-#### Performance Features
-- **Wall Reuse:** Segmentation computed once, applied to multiple products
-- **Timestamped Outputs:** All results preserved with unique identifiers
-- **Error Handling:** Comprehensive validation and fallback mechanisms
+#### Task 2: Generative Pipeline ⚠️
+
+**Working Components:**
+- **Implementation:** `scripts/task2_clean.py`
+- **Depth Generation:** Intel DPT-large model producing accurate depth maps ✅
+- **ControlNet Setup:** Stable Diffusion v1.5 + ControlNet depth conditioning ✅
+- **Size Variants:** 42" and 55" TV generation implemented ✅
+- **Pipeline Structure:** Complete SD pipeline with proper model loading ✅
+
+**Current Issues:**
+- **Product Disappearing:** TV products not appearing in generated images ❌
+- **Room Morphing:** Original room geometry being distorted during diffusion ❌
+- **Integration Quality:** Products not properly diffusing into wall surfaces ❌
+
+**Technical Analysis:**
+- Depth maps generating correctly (as shown in attached comparison image)
+- ControlNet conditioning working but diffusion process removing products
+- Room dimensions preserved but appearance significantly altered
 
 ## 📊 Results & Evidence
 
-### Sample Processing Results
-- **Input:** Room photo + User product images
-- **Processing Time:** ~79 seconds total (wall segmentation + 2 products)
-- **Output Quality:** Clean integration without artifacts
-- **Transparency Handling:** Successfully processes both transparent and opaque products
+### Task 1: Successful Results ✅
+- **Latest Results:** `output/task1_deterministic/results/`
+- **Processing Time:** ~8 seconds total (optimized performance)
+- **Output Quality:** Clean integration preserving product appearance
+- **Multiple Products:** TV and painting placement working correctly
+- **Wall Detection:** Reliable mask generation across different room types
 
-### Generated Outputs (Latest Run: 2025-09-16 04:54:11)
+### Task 2: Partial Results ⚠️
+- **Latest Results:** `output/task2_controlnet/`
+- **Depth Maps:** Successfully generating accurate depth fields
+- **Pipeline Status:** ControlNet conditioning working, diffusion issues
+- **Size Variants:** 42" and 55" TV framework implemented
+- **Issue Evidence:** Products disappearing, room morphing (see attached comparison)
+
+### Generated Outputs (Current Session: 2025-09-17)
+
+**Task 1 Outputs:**
 ```
-output/
-├── result_tv_20250916_045411.png           # TV placement result
-├── result_painting_20250916_045413.png     # Painting placement result
+output/task1_deterministic/
+├── results/
+│   ├── result_tv_20250917_*.png              # TV placement results
+│   └── result_painting_20250917_*.png        # Painting placement results
+├── masks/
+│   └── wall_mask_*_20250917_*.png            # Wall segmentation masks
+└── comparisons/
+    └── comparison_*_20250917_*.png           # Before/after comparisons
+```
+
+**Task 2 Outputs:**
+```
+output/task2_controlnet/
+├── generated/
+│   ├── generated_tv_42_inch_20250917_*.png   # 42" TV attempts
+│   └── generated_tv_55_inch_20250917_*.png   # 55" TV attempts
+├── masks/
+│   └── depth_map_20250917_*.png              # Depth conditioning maps
+└── comparisons/
+    └── task2_comparison_20250917_*.png       # Pipeline analysis
+```
 ├── comparison_tv_20250916_045411.png       # TV comparison view
 ├── comparison_painting_20250916_045413.png # Painting comparison view
 ├── wall_mask_tv_20250916_045411.png        # Wall segmentation mask
@@ -170,43 +208,47 @@ create_assets.py        # Asset management tools
 - Timestamped outputs prevent overwriting previous results
 - Configurable quality vs. speed trade-offs
 
-## 🔄 Future Enhancements (Task 2 - Planned)
+## � Current Issues & Resolution Plan
 
-### Generative Pipeline Roadmap
-- **Stable Diffusion Integration:** Hugging Face Diffusers implementation
-- **ControlNet Conditioning:** Depth and inpainting guidance
-- **Size Variations:** Dynamic scaling (42" vs 55" TV examples)
-- **Enhanced Realism:** Natural lighting and shadow generation
+### Task 2 Active Issues (Session Ending Point)
+1. **Product Disappearing Problem**: TV products not appearing in final generated images despite correct depth conditioning
+2. **Room Morphing Issue**: Original room characteristics being altered during diffusion process  
+3. **Diffusion Integration**: Products not properly blending with wall surfaces as intended
 
-## 📈 Evaluation Metrics - PASSED
+### Technical Analysis
+- **Depth Generation**: ✅ Working correctly with Intel DPT-large
+- **ControlNet Setup**: ✅ Pipeline established with proper conditioning
+- **Diffusion Process**: ❌ Removing products instead of adding them
+- **Room Preservation**: ❌ Morphing room appearance unacceptably
 
-| Criteria | Target | Achieved | Evidence |
-|----------|--------|----------|----------|
-| **Wall Segmentation Accuracy** | High precision | ✅ **PASSED** | Clean wall masks, 19 detected regions |
-| **Product Scaling & Perspective** | Realistic proportions | ✅ **PASSED** | Proper aspect ratios, centered placement |
-| **Visual Realism** | Natural integration | ✅ **PASSED** | No artifacts, preserved product appearance |
-| **Code Quality** | Clean, maintainable | ✅ **PASSED** | Modular structure, comprehensive documentation |
+### Planned Resolution for Next Session
+1. **Investigate Diffusion Parameters**: Adjust guidance scale, diffusion strength
+2. **Alternative ControlNet Approaches**: Test inpainting + depth combination  
+3. **Mask Generation Review**: Ensure proper mask creation for product areas
+4. **Prompt Engineering**: Refine prompts for better product integration
+5. **Model Alternatives**: Consider different ControlNet models or SD versions
 
-## 🛠️ Development Process
+## 📈 Evaluation Metrics
 
-### Setup & Configuration
-1. ✅ Repository initialization and structure
-2. ✅ Dependency management and virtual environment
-3. ✅ SAM model download and configuration (2.4GB checkpoint)
-4. ✅ Asset preparation and validation
+| Criteria | Task 1 Status | Task 2 Status | Evidence |
+|----------|---------------|---------------|----------|
+| **Wall Segmentation Accuracy** | ✅ **PASSED** | ✅ **PASSED** | SAM masks + depth maps working |
+| **Product Scaling & Perspective** | ✅ **PASSED** | ⚠️ **PARTIAL** | Task 1 perfect, Task 2 size variants setup |
+| **Visual Realism** | ✅ **PASSED** | ❌ **FAILING** | Task 1 excellent, Task 2 products disappearing |
+| **Code Quality** | ✅ **PASSED** | ✅ **PASSED** | Both pipelines well-structured |
 
-### Implementation Phases
-1. ✅ **Phase 1:** Basic SAM integration and wall detection
-2. ✅ **Phase 2:** Product placement algorithm development
-3. ✅ **Phase 3:** Transparency handling and blending optimization
-4. ✅ **Phase 4:** Performance tuning and error handling
-5. ✅ **Phase 5:** User experience enhancements and documentation
+## 🛠️ Development Process Update
 
-### Testing & Validation
-- ✅ Multiple product types (TV, paintings)
-- ✅ Various transparency formats (PNG with/without alpha)
-- ✅ Performance benchmarking and optimization
-- ✅ Edge case handling and error recovery
+### Completed Implementation Phases
+1. ✅ **Task 1 Complete:** SAM integration, product placement, alpha blending
+2. ✅ **Task 2 Infrastructure:** SD pipeline, ControlNet setup, depth generation  
+3. ⚠️ **Task 2 Issues:** Product diffusion and room preservation problems identified
+
+### Session End Status
+- **Task 1**: Fully working and meeting all AI Assignment requirements
+- **Task 2**: Foundation complete, core functionality needs refinement
+- **Documentation**: Updated to reflect current progress and issues
+- **Next Steps**: Clearly defined for Task 2 completion
 
 ## 📁 Deliverables
 

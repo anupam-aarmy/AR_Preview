@@ -71,8 +71,12 @@ def compute_ssim(original: np.ndarray, generated: np.ndarray, mask: np.ndarray) 
     return float(score)
 
 
-def synthetic_tv_fallback(base_image: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    """Render a synthetic TV (matte bezel + panel) inside the mask bbox."""
+def synthetic_tv_fallback(base_image: np.ndarray, mask: np.ndarray, bezel_ratio: float = 0.04, reflection_strength: float = 1.0) -> np.ndarray:
+    """Render a synthetic TV (matte bezel + panel) inside the mask bbox.
+
+    bezel_ratio:   fraction of min(w,h) used as bezel thickness (default 0.04)
+    reflection_strength: scales reflection alpha (1.0 = default)
+    """
     out = base_image.copy()
     ys, xs = np.where(mask > 0)
     if len(xs) == 0 or len(ys) == 0:
@@ -80,7 +84,7 @@ def synthetic_tv_fallback(base_image: np.ndarray, mask: np.ndarray) -> np.ndarra
     x1, x2 = xs.min(), xs.max()
     y1, y2 = ys.min(), ys.max()
     # Slight inset for bezel thickness
-    bezel_thickness_ratio = 0.04
+    bezel_thickness_ratio = max(0.01, min(0.15, bezel_ratio))
     w = x2 - x1 + 1
     h = y2 - y1 + 1
     bezel_px = max(2, int(min(w, h) * bezel_thickness_ratio))
@@ -94,7 +98,10 @@ def synthetic_tv_fallback(base_image: np.ndarray, mask: np.ndarray) -> np.ndarra
     rdraw = ImageDraw.Draw(reflection)
     # Diagonal streaks
     for i in range(2):
-        alpha = 28 if i == 0 else 18
+        base_alpha = 28 if i == 0 else 18
+        alpha = int(base_alpha * reflection_strength)
+        if alpha <= 0:
+            continue
         rdraw.rectangle([int(w*0.05)+i*int(w*0.1), 0, int(w*0.15)+i*int(w*0.1), h], fill=(255, 255, 255, alpha))
     reflection = reflection.filter(ImageFilter.GaussianBlur(radius=w * 0.05))
     panel = Image.alpha_composite(panel.convert("RGBA"), reflection).convert("RGB")
