@@ -172,7 +172,7 @@ def load_sam_wall_mask(room_image_path):
     print(f"✅ Created optimized wall mask: {wall_x2-wall_x1}x{wall_y2-wall_y1} region")
     return image, mask
 
-def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV", cfg: GenerationConfig = None, overlays_dir: str = None):
+def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV", cfg: GenerationConfig = None, overlays_dir: str = None, depth_pil: Image.Image = None):
     """
     Generate different product sizes as required by assignment
     Task 2 Requirement: Show at least two product size variations (e.g., 42" vs 55" TV)
@@ -305,7 +305,7 @@ def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV
         steps = cfg.steps if cfg else 30
         guidance = 7.5 if cfg and cfg.fast else 8.5
         with torch.no_grad():
-            result = pipe(
+            pipe_kwargs = dict(
                 prompt=config['prompt'],
                 negative_prompt=config['negative_prompt'],
                 image=room_pil,
@@ -314,8 +314,12 @@ def generate_product_sizes(pipe, device, room_image, wall_mask, product_type="TV
                 guidance_scale=guidance,
                 strength=0.99,
                 width=w,
-                height=h
-            ).images[0]
+                height=h,
+            )
+            # If ControlNet depth is active, pass control_image
+            if depth_pil is not None and hasattr(pipe, 'controlnet'):
+                pipe_kwargs['control_image'] = depth_pil
+            result = pipe(**pipe_kwargs).images[0]
         
         # Convert back to OpenCV format
         result_cv = cv2.cvtColor(np.array(result), cv2.COLOR_RGB2BGR)
@@ -508,12 +512,12 @@ def main():
     tv_results = {}
     if args.product_type in ("TV", "Both"):
         print("\n🎨 Generating TV size variations (Assignment Task 2 requirement)...")
-    tv_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "TV", cfg, overlays_dir)
+    tv_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "TV", cfg, overlays_dir, depth_pil=depth_pil)
 
     painting_results = {}
     if args.product_type in ("Painting", "Both"):
         print("\n🎨 Generating painting variations...")
-    painting_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "Painting", cfg, overlays_dir)
+    painting_results = generate_product_sizes(pipe, device, working_room, wall_mask_work, "Painting", cfg, overlays_dir, depth_pil=depth_pil)
 
     metadata_common = {
         'fast_mode': cfg.fast,
