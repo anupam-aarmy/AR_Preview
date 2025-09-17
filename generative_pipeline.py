@@ -411,6 +411,7 @@ def parse_args():
     parser.add_argument('--height', type=int, default=None, help='Force working height (optional)')
     parser.add_argument('--no-save-overlays', action='store_true', help='Disable saving diagnostic overlays')
     parser.add_argument('--no-fallback', action='store_true', help='Disable synthetic TV fallback if no change detected')
+    parser.add_argument('--delta-threshold', type=float, default=0.98, help='SSIM threshold at/above which area considered unchanged (trigger fallback)')
     parser.add_argument('--output-dir', default='output', help='Base output directory')
     return parser.parse_args()
 
@@ -491,6 +492,69 @@ def main():
     painting_timestamp = None
     if painting_results:
         painting_timestamp = save_generation_results(working_room, painting_results, output_dir, "Painting", cfg=cfg, metadata=metadata_common)
+
+    # Delta detection + fallback (TV only for now)
+    delta_entries = []
+    if tv_results:
+        print("\n🔍 Performing SSIM delta detection inside TV masks...")
+        for size_key, data in tv_results.items():
+            gen_img = data['image']
+            orig_img = working_room
+            mask = data.get('expanded_mask', data['mask'])
+            score = compute_ssim(orig_img, gen_img, mask)
+            entry = {
+                'size_key': size_key,
+                'description': data['description'],
+                'ssim': score,
+                'threshold': args.delta_threshold,
+                'fallback_applied': False
+            }
+            if score != -1 and score >= args.delta_threshold and not cfg.no_fallback:
+                print(f"  ⚠️  SSIM={score:.4f} ≥ {args.delta_threshold} → applying synthetic TV fallback for {size_key}")
+                # Apply fallback to working_room copy region (only masked area)
+                fallback_img = synthetic_tv_fallback(gen_img, mask)
+                data['image'] = fallback_img
+                entry['fallback_applied'] = True
+            else:
+                print(f"  ✅ {size_key} SSIM={score:.4f} (fallback {'skipped (disabled)' if cfg.no_fallback else 'not needed'})")
+            delta_entries.append(entry)
+
+        # Save updated images if fallback changed them (re-save generated outputs for TV)
+        if delta_entries:
+            print("💾 Writing delta report and (if needed) updating TV outputs with fallback applied")
+            task2_base = os.path.join(output_dir, 'task2_generative')
+            delta_path = os.path.join(task2_base, 'delta_report.json')
+            try:
+                with open(delta_path, 'w', encoding='utf-8') as f:
+                    json.dump({'entries': delta_entries}, f, indent=2)
+            except Exception as e:
+                print(f"⚠️  Could not save delta report: {e}")
+
+            # Re-save TV images if any fallback applied
+            if any(e['fallback_applied'] for e in delta_entries):
+                tv_generated_dir = os.path.join(task2_base, 'generated')
+                for size_key, data in tv_results.items():
+                    # Find latest file pattern for this size in generated dir (simpler: just save new variant)
+                    timestamp_new = datetime.now().strftime('%Y%m%d_%H%M%S')
+                    out_path = os.path.join(tv_generated_dir, f"generated_tv_{size_key}_fallback_{timestamp_new}.png")
+                    cv2.imwrite(out_path, data['image'])
+                # Update metadata with fallback summary
+                meta_update = {
+                    'delta_threshold': args.delta_threshold,
+                    'fallback_any': any(e['fallback_applied'] for e in delta_entries)
+                }
+                run_meta_path = os.path.join(task2_base, 'run_metadata.json')
+                try:
+                    if os.path.exists(run_meta_path):
+                        with open(run_meta_path, 'r', encoding='utf-8') as f:
+                            existing = json.load(f)
+                    else:
+                        existing = {}
+                    existing.update(meta_update)
+                    with open(run_meta_path, 'w', encoding='utf-8') as f:
+                        json.dump(existing, f, indent=2)
+                except Exception:
+                    pass
     
     print(f"\n✅ Task 2 COMPLETED: Stable Diffusion Product Generation!")
     print(f"📊 Generated products: {len(tv_results)} TV + {len(painting_results)} Painting variations")
