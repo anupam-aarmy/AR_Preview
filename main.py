@@ -1,6 +1,15 @@
 """
 AR Preview Pipeline - Main Entry Point
-AI Assignment Implementation for Module 2 (Single Wall Fitting)
+AI Assignment Implem        # Run Task 2
+        print("\n📋 TASK 2: Stable Diffusion + ControlNet (AI Assignment)")
+        print("-" * 50)
+        try:
+            from scripts.task2_assignment_compliant import main as task2_main
+            task2_main()
+            print("✅ Task 2 completed!")
+        except Exception as e:
+            print(f"❌ Task 2 failed: {e}")
+            returnor Module 2 (Single Wall Fitting)
 
 Tasks:
 - Task 1: SAM wall segmentation + deterministic product placement
@@ -38,10 +47,10 @@ def main():
             sys.exit(1)
             
     elif args.task == "2":
-        print("🚀 Running Task 2: Stable Diffusion + ControlNet")
-        print("=" * 50)
+        print("🚀 Running Task 2: Stable Diffusion + ControlNet (AI Assignment)")
+        print("=" * 60)
         try:
-            from task2_clean import main as task2_main
+            from scripts.task2_assignment_compliant import main as task2_main
             task2_main()
             print("\n✅ Task 2 completed successfully!")
         except Exception as e:
