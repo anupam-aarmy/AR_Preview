@@ -28,8 +28,14 @@ ENV/
 .venv/
 .env/
 
-# VS Code settings
-.vscode/settings.json
+# IDE and development folders (should not be tracked)
+.vscode/
+.vs/
+.github/
+.gemini/
+.idea/
+*.swp
+*.swo
 
 # Assignment documents
 AI_Assignment*.docx
@@ -57,11 +63,6 @@ output/test_*
 Thumbs.db
 *.log
 
-# IDE files
-.idea/
-*.swp
-*.swo
-
 # Backup files
 *.bak
 *.backup
@@ -80,13 +81,7 @@ temp/
 .DS_Store
 Thumbs.db
 
-# IDE
-.idea/
-*.swp
-*.swo
-
 # Visual Studio workspace state
-.vs/
 *.db
 *.opendb
 *.VC.db
