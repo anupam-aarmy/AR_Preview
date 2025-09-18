@@ -1,7 +1,15 @@
 """
-Task 2: IMPROVED Product Placement Pipeline
-Addresses detail loss, alignment, aspect ratios, and shape preservation
-Uses new assets: tv_1.png, tv_2.png, painting_1.png, painting_2.png
+Task 2: Generative Product Placement Pipeline (PRODUCTION)
+Stable Diffusion + ControlNet with enhanced detail preservation and aspect correction
+Production-ready implementation with optimized quality settings
+
+PRODUCTION FEATURES:
+- Enhanced detail preservation with ultra-sharp prompts
+- Actual aspect ratio preservation from product images
+- Safe sizing strategy preventing overflow
+- Optimized ControlNet conditioning parameters
+- High-quality post-processing with sharpness enhancement
+- Production-grade error handling and logging
 """
 
 import os
@@ -96,22 +104,6 @@ class ImprovedProductPlacementPipeline:
         
         print(f"✅ Loaded and enhanced product: {product.shape} -> {product_enhanced.shape} from {Path(product_path).name}")
         return product_enhanced
-    
-    def get_actual_product_aspect_ratio(self, product_path):
-        """
-        Get the actual aspect ratio from the product image instead of hardcoded values.
-        This ensures TVs and paintings maintain their real proportions.
-        """
-        product = cv2.imread(str(product_path), cv2.IMREAD_UNCHANGED)
-        if product is None:
-            print(f"❌ Could not load product image: {product_path}")
-            return 1.0  # Fallback to square
-        
-        h, w = product.shape[:2]
-        aspect_ratio = w / h
-        
-        print(f"📐 ACTUAL product aspect ratio for {Path(product_path).name}: {aspect_ratio:.3f}:1 ({w}×{h})")
-        return aspect_ratio
         
     def create_depth_map(self, image):
         """Create enhanced depth map with better wall detection"""
@@ -146,74 +138,101 @@ class ImprovedProductPlacementPipeline:
         print(f"🔍 Enhanced depth map: {depth.shape} -> resized to {depth_enhanced.shape}")
         return depth_enhanced
         
+    def get_actual_product_aspect_ratio(self, product_path):
+        """Extract real aspect ratio from product image dimensions"""
+        if not os.path.exists(product_path):
+            print(f"❌ Product image not found: {product_path}")
+            return 1.0
+            
+        product_img = cv2.imread(product_path, cv2.IMREAD_UNCHANGED)
+        if product_img is None:
+            print(f"❌ Failed to load product image: {product_path}")
+            return 1.0
+            
+        height, width = product_img.shape[:2]
+        aspect_ratio = width / height
+        print(f"📐 ACTUAL product aspect ratio for {os.path.basename(product_path)}: {aspect_ratio:.3f}:1 ({width}×{height})")
+        return aspect_ratio
+        
     def calculate_optimal_dimensions(self, room_shape, product_type, size_variant, product_path):
-        """Calculate optimal product dimensions using ACTUAL aspect ratios"""
+        """Calculate optimal product dimensions using ACTUAL aspect ratios with safe sizing"""
         h, w = room_shape[:2]
         
         # Get actual aspect ratio from product image
         actual_aspect_ratio = self.get_actual_product_aspect_ratio(product_path)
         
         if product_type == "tv":
-            # TVs: Use ACTUAL aspect ratio, not hardcoded 16:9
             if size_variant == "42_inch":
-                # 42" TV: 30% width, maintain ACTUAL aspect ratio
-                product_w = int(w * 0.30)
+                # 42" TV: 28% width, use actual aspect ratio
+                product_w = int(w * 0.28)
                 product_h = int(product_w / actual_aspect_ratio)
             else:  # 55_inch
-                # 55" TV: 38% width, maintain ACTUAL aspect ratio
-                product_w = int(w * 0.38)
+                # 55" TV: 35% width, use actual aspect ratio
+                product_w = int(w * 0.35)
                 product_h = int(product_w / actual_aspect_ratio)
                 
         else:  # painting
-            # Paintings: Use ACTUAL aspect ratio, not hardcoded 1:1
             if size_variant == "medium":
-                # Medium painting: 26% width, preserve ACTUAL aspect ratio
-                product_w = int(w * 0.26)
+                # Medium painting: 15% width (SAFE sizing to prevent overflow)
+                product_w = int(w * 0.15)
                 product_h = int(product_w / actual_aspect_ratio)
             else:  # large
-                # Large painting: 35% width, preserve ACTUAL aspect ratio
-                product_w = int(w * 0.35)
+                # Large painting: 20% width (SAFE sizing to prevent overflow)
+                product_w = int(w * 0.20)
                 product_h = int(product_w / actual_aspect_ratio)
+        
+        # CRITICAL: Ensure no overflow beyond wall bounds
+        max_height = int(h * 0.6)  # Maximum 60% of wall height for safety
+        if product_h > max_height:
+            print(f"⚠️  Height overflow detected: {product_h} > {max_height}, adjusting...")
+            product_h = max_height
+            product_w = int(product_h * actual_aspect_ratio)
                 
         print(f"📐 {product_type} ({size_variant}): {product_w}x{product_h} ({product_w/w*100:.0f}%x{product_h/h*100:.0f}%)")
         print(f"   🎯 ACTUAL aspect ratio used: {actual_aspect_ratio:.3f}:1 (not hardcoded!)")
         return product_w, product_h
         
     def create_optimal_placement_mask(self, room_shape, product_w, product_h, product_type):
-        """Create optimally positioned mask avoiding floor and ceiling"""
+        """Create optimally positioned mask avoiding floor and ceiling with CENTERED placement"""
         h, w = room_shape[:2]
         
-        # Center horizontally
+        # Center horizontally in available wall space
         start_x = (w - product_w) // 2
         
-        # Better vertical positioning - center in available wall space
+        # IMPROVED vertical positioning - center in SAFE available wall space
         if product_type == "tv":
             # TVs: Place in upper-middle of wall (30% from top)
             start_y = int(h * 0.30)
         else:  # painting
-            # Paintings: Center in available wall space (avoid floor and ceiling)
-            # Create safe zone: 15% from top, 20% from bottom
-            safe_top = int(h * 0.15)
-            safe_bottom = int(h * 0.80)
+            # Paintings: CENTER in available safe wall space (avoid floor and ceiling)
+            safe_top = int(h * 0.15)      # 15% from top
+            safe_bottom = int(h * 0.75)   # 75% from top (25% from bottom)
             available_height = safe_bottom - safe_top
             
-            # Center in available space
+            # CENTER the painting in the available safe space
             if product_h <= available_height:
                 start_y = safe_top + (available_height - product_h) // 2
             else:
-                # If too tall, place at safe top
+                # If still too tall, place at safe top and clip height
                 start_y = safe_top
-                # Adjust height to fit in safe zone
                 product_h = min(product_h, available_height)
+                print(f"⚠️  Painting height clipped to fit safe zone: {product_h}")
         
-        # Ensure bounds
+        # CRITICAL: Final bounds checking - NOTHING can overflow
         start_x = max(0, min(start_x, w - product_w))
-        start_y = max(int(h * 0.1), min(start_y, h - product_h - int(h * 0.1)))
+        start_y = max(int(h * 0.10), min(start_y, h - product_h - int(h * 0.15)))
         
+        # Ensure we don't exceed room bounds
+        if start_x + product_w > w:
+            start_x = w - product_w
+        if start_y + product_h > h:
+            start_y = h - product_h
+            
         mask = np.zeros((h, w), dtype=np.uint8)
         mask[start_y:start_y+product_h, start_x:start_x+product_w] = 255
         
         print(f"📍 Optimal placement: x={start_x}, y={start_y} (y: {start_y/h*100:.1f}% from top)")
+        print(f"   🔒 Safe bounds: x=[0,{w-product_w}], y=[{int(h*0.10)},{h-product_h-int(h*0.15)}]")
         return mask, (start_x, start_y, product_w, product_h)
         
     def resize_product_preserving_details(self, product_image, target_w, target_h, product_type):
@@ -284,32 +303,36 @@ class ImprovedProductPlacementPipeline:
         mask_pil = Image.fromarray(mask)
         control_pil = Image.fromarray(control_image)
         
-        # Enhanced prompts for better detail preservation
+        # Enhanced prompts for MAXIMUM detail preservation and sharpness
         if product_type == "tv":
-            prompt = f"photorealistic {size_variant.replace('_', '-')} television with sharp details, clear screen, natural lighting, perfectly mounted on wall, high definition, crisp edges"
-            negative_prompt = "blurry, low quality, distorted, floating, unrealistic, soft focus, pixelated, low resolution"
+            prompt = f"ultra-sharp photorealistic {size_variant.replace('_', '-')} television, crystal clear screen, razor-sharp edges, high contrast, vibrant colors, perfect mounting, studio lighting, 8K resolution, ultra-detailed"
+            negative_prompt = "blurry, soft, low quality, distorted, floating, unrealistic, fuzzy, pixelated, low resolution, washed out, dull, faded"
         else:  # painting
-            prompt = f"photorealistic framed {size_variant} artwork with fine details, clear texture, natural lighting, perfectly mounted on wall, sharp frame, high definition"
-            negative_prompt = "blurry, low quality, distorted, floating, unrealistic, soft focus, pixelated, low resolution"
+            prompt = f"ultra-sharp photorealistic framed {size_variant} artwork, crisp fine details, vibrant saturated colors, crystal clear texture, perfect frame definition, studio lighting, 8K resolution, ultra-detailed"
+            negative_prompt = "blurry, soft, low quality, distorted, floating, unrealistic, fuzzy, pixelated, low resolution, washed out, dull, faded"
         
         print(f"🎨 Generating improved {product_type} ({size_variant})...")
         print(f"📝 Enhanced prompt: {prompt[:70]}...")
         
-        # Optimized parameters for detail preservation and shape integrity
+        # OPTIMIZED parameters for MAXIMUM detail preservation and sharpness
         result = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image=initial_pil,
             mask_image=mask_pil,
             control_image=control_pil,
-            num_inference_steps=25,  # Fewer steps to preserve details
-            guidance_scale=6.5,      # Lower guidance to preserve original features
-            controlnet_conditioning_scale=0.7,  # Moderate depth conditioning
-            strength=0.5,            # Lower strength to preserve product details
+            num_inference_steps=30,     # More steps for better detail
+            guidance_scale=7.5,         # Higher guidance for sharper results
+            controlnet_conditioning_scale=0.8,  # Strong depth conditioning
+            strength=0.4,               # Lower strength to preserve product details
             generator=torch.Generator(device=self.device).manual_seed(42)
         ).images[0]
         
-        return np.array(result)
+        # POST-PROCESSING for enhanced sharpness and saturation
+        result_enhanced = ImageEnhance.Sharpness(result).enhance(1.3)  # Enhance sharpness
+        result_enhanced = ImageEnhance.Color(result_enhanced).enhance(1.2)  # Enhance saturation
+        
+        return np.array(result_enhanced)
         
     def process_single_product(self, room_path, product_path, product_type):
         """Process a single product with size variations"""
@@ -339,7 +362,7 @@ class ImprovedProductPlacementPipeline:
         for variant in variants:
             print(f"\n📺 Processing {variant}...")
             
-            # Calculate optimal dimensions using ACTUAL aspect ratio
+            # Calculate optimal dimensions using actual product aspect ratio
             product_w, product_h = self.calculate_optimal_dimensions(
                 room_image.shape, product_type, variant, product_path
             )
