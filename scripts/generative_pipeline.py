@@ -96,6 +96,22 @@ class ImprovedProductPlacementPipeline:
         
         print(f"✅ Loaded and enhanced product: {product.shape} -> {product_enhanced.shape} from {Path(product_path).name}")
         return product_enhanced
+    
+    def get_actual_product_aspect_ratio(self, product_path):
+        """
+        Get the actual aspect ratio from the product image instead of hardcoded values.
+        This ensures TVs and paintings maintain their real proportions.
+        """
+        product = cv2.imread(str(product_path), cv2.IMREAD_UNCHANGED)
+        if product is None:
+            print(f"❌ Could not load product image: {product_path}")
+            return 1.0  # Fallback to square
+        
+        h, w = product.shape[:2]
+        aspect_ratio = w / h
+        
+        print(f"📐 ACTUAL product aspect ratio for {Path(product_path).name}: {aspect_ratio:.3f}:1 ({w}×{h})")
+        return aspect_ratio
         
     def create_depth_map(self, image):
         """Create enhanced depth map with better wall detection"""
@@ -130,35 +146,37 @@ class ImprovedProductPlacementPipeline:
         print(f"🔍 Enhanced depth map: {depth.shape} -> resized to {depth_enhanced.shape}")
         return depth_enhanced
         
-    def calculate_optimal_dimensions(self, room_shape, product_type, size_variant):
-        """Calculate optimal product dimensions preserving aspect ratios"""
+    def calculate_optimal_dimensions(self, room_shape, product_type, size_variant, product_path):
+        """Calculate optimal product dimensions using ACTUAL aspect ratios"""
         h, w = room_shape[:2]
         
+        # Get actual aspect ratio from product image
+        actual_aspect_ratio = self.get_actual_product_aspect_ratio(product_path)
+        
         if product_type == "tv":
-            # TVs should maintain 16:9 aspect ratio but be appropriately sized
+            # TVs: Use ACTUAL aspect ratio, not hardcoded 16:9
             if size_variant == "42_inch":
-                # 42" TV: 30% width, maintain 16:9 aspect ratio
+                # 42" TV: 30% width, maintain ACTUAL aspect ratio
                 product_w = int(w * 0.30)
-                product_h = int(product_w / 1.78)  # 16:9 aspect ratio
+                product_h = int(product_w / actual_aspect_ratio)
             else:  # 55_inch
-                # 55" TV: 38% width, maintain 16:9 aspect ratio
+                # 55" TV: 38% width, maintain ACTUAL aspect ratio
                 product_w = int(w * 0.38)
-                product_h = int(product_w / 1.78)  # 16:9 aspect ratio
+                product_h = int(product_w / actual_aspect_ratio)
                 
         else:  # painting
-            # Paintings should maintain their natural proportions
+            # Paintings: Use ACTUAL aspect ratio, not hardcoded 1:1
             if size_variant == "medium":
-                # Medium painting: 26% width, preserve aspect ratio
+                # Medium painting: 26% width, preserve ACTUAL aspect ratio
                 product_w = int(w * 0.26)
-                product_h = int(product_w * 1.0)  # Assume square for now, will adjust based on actual image
+                product_h = int(product_w / actual_aspect_ratio)
             else:  # large
-                # Large painting: 35% width, preserve aspect ratio
+                # Large painting: 35% width, preserve ACTUAL aspect ratio
                 product_w = int(w * 0.35)
-                product_h = int(product_w * 1.0)  # Assume square for now, will adjust based on actual image
+                product_h = int(product_w / actual_aspect_ratio)
                 
         print(f"📐 {product_type} ({size_variant}): {product_w}x{product_h} ({product_w/w*100:.0f}%x{product_h/h*100:.0f}%)")
-        if product_type == "tv":
-            print(f"   📺 TV aspect ratio: {product_w/product_h:.2f}:1 (target: 1.78:1)")
+        print(f"   🎯 ACTUAL aspect ratio used: {actual_aspect_ratio:.3f}:1 (not hardcoded!)")
         return product_w, product_h
         
     def create_optimal_placement_mask(self, room_shape, product_w, product_h, product_type):
@@ -321,9 +339,9 @@ class ImprovedProductPlacementPipeline:
         for variant in variants:
             print(f"\n📺 Processing {variant}...")
             
-            # Calculate optimal dimensions
+            # Calculate optimal dimensions using ACTUAL aspect ratio
             product_w, product_h = self.calculate_optimal_dimensions(
-                room_image.shape, product_type, variant
+                room_image.shape, product_type, variant, product_path
             )
             
             # Create optimal placement mask
