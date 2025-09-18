@@ -41,12 +41,36 @@ models/*.pt
 models/*.safetensors
 models/*.ckpt
 
-# Output files (keep sample results but ignore temporary files)
+# Output files (keep organized results but ignore temporary files)
 output/temp_*
 output/*.tmp
+output/debug_*
+output/test_*
+*_temp.png
+*_debug.png
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# System files
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Cache and temporary directories
+.cache/
+tmp/
+temp/
 
 # PyTorch
 *.pth
