@@ -41,14 +41,12 @@ class ImprovedProductPlacementPipeline:
         self.run_dir = self.output_dir / f"run_{self.timestamp}"
         self.run_dir.mkdir(exist_ok=True)
         
-        print("🔧 TASK 2: IMPROVED PRODUCT PLACEMENT PIPELINE")
-        print("✅ Enhanced detail preservation, alignment, and aspect ratios")
-        print(f"📱 Device: {self.device}")
-        print(f"📁 Output: {self.run_dir}")
+        print("🔧 Task 2: Generative Pipeline (Stable Diffusion + ControlNet)")
+        print(f"📁 Output directory: {self.run_dir}")
         
     def setup_pipeline(self):
         """Setup enhanced ControlNet inpainting pipeline"""
-        print("🚀 Setting up IMPROVED PRODUCT PLACEMENT pipeline...")
+        print("🚀 Initializing AI models...")
         
         # Load ControlNet for inpainting
         controlnet = ControlNetModel.from_pretrained(
@@ -71,7 +69,7 @@ class ImprovedProductPlacementPipeline:
         self.depth_model = DPTForDepthEstimation.from_pretrained("Intel/dpt-large")
         self.depth_model = self.depth_model.to(self.device)
         
-        print("✅ Improved product placement pipeline ready")
+        print(f"✅ Models ready ({self.device})")
         
     def load_product_image(self, product_path):
         """Load product image with enhanced preprocessing"""
@@ -101,8 +99,6 @@ class ImprovedProductPlacementPipeline:
         product_pil = enhancer.enhance(1.1)  # Slightly more contrast
         
         product_enhanced = np.array(product_pil)
-        
-        print(f"✅ Loaded and enhanced product: {product.shape} -> {product_enhanced.shape} from {Path(product_path).name}")
         return product_enhanced
         
     def create_depth_map(self, image):
@@ -135,23 +131,19 @@ class ImprovedProductPlacementPipeline:
         # Additional gaussian blur for smoother depth transitions
         depth_enhanced = cv2.GaussianBlur(depth_enhanced, (3, 3), 0)
         
-        print(f"🔍 Enhanced depth map: {depth.shape} -> resized to {depth_enhanced.shape}")
         return depth_enhanced
         
     def get_actual_product_aspect_ratio(self, product_path):
         """Extract real aspect ratio from product image dimensions"""
         if not os.path.exists(product_path):
-            print(f"❌ Product image not found: {product_path}")
             return 1.0
             
         product_img = cv2.imread(product_path, cv2.IMREAD_UNCHANGED)
         if product_img is None:
-            print(f"❌ Failed to load product image: {product_path}")
             return 1.0
             
         height, width = product_img.shape[:2]
         aspect_ratio = width / height
-        print(f"📐 ACTUAL product aspect ratio for {os.path.basename(product_path)}: {aspect_ratio:.3f}:1 ({width}×{height})")
         return aspect_ratio
         
     def calculate_optimal_dimensions(self, room_shape, product_type, size_variant, product_path):
@@ -163,33 +155,27 @@ class ImprovedProductPlacementPipeline:
         
         if product_type == "tv":
             if size_variant == "42_inch":
-                # 42" TV: 28% width, use actual aspect ratio
-                product_w = int(w * 0.28)
+                product_w = int(w * 0.28)  # 42" TV: 28% width
                 product_h = int(product_w / actual_aspect_ratio)
             else:  # 55_inch
-                # 55" TV: 35% width, use actual aspect ratio
-                product_w = int(w * 0.35)
+                product_w = int(w * 0.35)  # 55" TV: 35% width
                 product_h = int(product_w / actual_aspect_ratio)
                 
         else:  # painting
             if size_variant == "medium":
-                # Medium painting: 15% width (SAFE sizing to prevent overflow)
-                product_w = int(w * 0.15)
+                product_w = int(w * 0.15)  # Medium painting: 15% width
                 product_h = int(product_w / actual_aspect_ratio)
             else:  # large
-                # Large painting: 20% width (SAFE sizing to prevent overflow)
-                product_w = int(w * 0.20)
+                product_w = int(w * 0.20)  # Large painting: 20% width
                 product_h = int(product_w / actual_aspect_ratio)
         
-        # CRITICAL: Ensure no overflow beyond wall bounds
+        # Ensure no overflow beyond wall bounds
         max_height = int(h * 0.6)  # Maximum 60% of wall height for safety
         if product_h > max_height:
-            print(f"⚠️  Height overflow detected: {product_h} > {max_height}, adjusting...")
             product_h = max_height
             product_w = int(product_h * actual_aspect_ratio)
                 
-        print(f"📐 {product_type} ({size_variant}): {product_w}x{product_h} ({product_w/w*100:.0f}%x{product_h/h*100:.0f}%)")
-        print(f"   🎯 ACTUAL aspect ratio used: {actual_aspect_ratio:.3f}:1 (not hardcoded!)")
+        print(f"📐 {product_type} ({size_variant}): {product_w}×{product_h} px, aspect ratio {actual_aspect_ratio:.3f}:1")
         return product_w, product_h
         
     def create_optimal_placement_mask(self, room_shape, product_w, product_h, product_type):
@@ -216,7 +202,6 @@ class ImprovedProductPlacementPipeline:
                 # If still too tall, place at safe top and clip height
                 start_y = safe_top
                 product_h = min(product_h, available_height)
-                print(f"⚠️  Painting height clipped to fit safe zone: {product_h}")
         
         # CRITICAL: Final bounds checking - NOTHING can overflow
         start_x = max(0, min(start_x, w - product_w))
@@ -231,8 +216,6 @@ class ImprovedProductPlacementPipeline:
         mask = np.zeros((h, w), dtype=np.uint8)
         mask[start_y:start_y+product_h, start_x:start_x+product_w] = 255
         
-        print(f"📍 Optimal placement: x={start_x}, y={start_y} (y: {start_y/h*100:.1f}% from top)")
-        print(f"   🔒 Safe bounds: x=[0,{w-product_w}], y=[{int(h*0.10)},{h-product_h-int(h*0.15)}]")
         return mask, (start_x, start_y, product_w, product_h)
         
     def resize_product_preserving_details(self, product_image, target_w, target_h, product_type):
@@ -249,8 +232,6 @@ class ImprovedProductPlacementPipeline:
         product_resized = enhancer.enhance(1.15)
         
         product_final = np.array(product_resized)
-        
-        print(f"🔍 High-quality resize: {product_image.shape[:2]} -> {product_final.shape[:2]} with detail preservation")
         return product_final
         
     def place_product_with_blending(self, room_image, product_image, placement_info, product_type):
@@ -311,8 +292,7 @@ class ImprovedProductPlacementPipeline:
             prompt = f"ultra-sharp photorealistic framed {size_variant} artwork, crisp fine details, vibrant saturated colors, crystal clear texture, perfect frame definition, studio lighting, 8K resolution, ultra-detailed"
             negative_prompt = "blurry, soft, low quality, distorted, floating, unrealistic, fuzzy, pixelated, low resolution, washed out, dull, faded"
         
-        print(f"🎨 Generating improved {product_type} ({size_variant})...")
-        print(f"📝 Enhanced prompt: {prompt[:70]}...")
+        print(f"🎨 Generating {product_type} ({size_variant})...")
         
         # OPTIMIZED parameters for MAXIMUM detail preservation and sharpness
         result = self.pipe(
@@ -336,7 +316,7 @@ class ImprovedProductPlacementPipeline:
         
     def process_single_product(self, room_path, product_path, product_type):
         """Process a single product with size variations"""
-        print(f"\n🎯 Processing {product_type}: {Path(product_path).name}")
+        print(f"🎯 Processing {product_type}: {Path(product_path).name}")
         
         # Load room and product images
         room_image = cv2.imread(room_path)
@@ -345,10 +325,7 @@ class ImprovedProductPlacementPipeline:
             
         product_image = self.load_product_image(product_path)
         
-        print(f"✅ Room loaded: {room_image.shape}")
-        
         # Create enhanced depth map
-        print("🔍 Creating enhanced depth map...")
         depth_map = self.create_depth_map(room_image)
         
         # Define size variants
@@ -360,8 +337,6 @@ class ImprovedProductPlacementPipeline:
         results = {}
         
         for variant in variants:
-            print(f"\n📺 Processing {variant}...")
-            
             # Calculate optimal dimensions using actual product aspect ratio
             product_w, product_h = self.calculate_optimal_dimensions(
                 room_image.shape, product_type, variant, product_path
@@ -390,7 +365,7 @@ class ImprovedProductPlacementPipeline:
                 # Save individual result
                 result_path = self.run_dir / f"{product_type}_{variant}_{self.timestamp}.png"
                 cv2.imwrite(str(result_path), cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-                print(f"✅ Saved: {result_path.name}")
+                print(f"✅ Saved {variant}: {result_path.name}")
                 
             except Exception as e:
                 print(f"❌ Failed to generate {variant}: {e}")
@@ -399,17 +374,15 @@ class ImprovedProductPlacementPipeline:
         
     def create_enhanced_comparison(self, results, product_type, product_image):
         """Create enhanced comparison visualization"""
-        print(f"📊 Creating enhanced {product_type} comparison...")
-        
         # Get variants
         variants = list(results.keys())
         if len(variants) == 0:
-            print(f"❌ No results to compare for {product_type}")
             return None
             
-        # Create figure
+        # Create figure with reduced matplotlib verbosity
+        plt.rcParams['figure.max_open_warning'] = 0
         fig, axes = plt.subplots(2, 4, figsize=(20, 10))
-        fig.suptitle(f'Task 2: Improved {product_type.title()} Placement (Detail Preserved)', fontsize=16, fontweight='bold')
+        fig.suptitle(f'Task 2: Generative {product_type.title()} Placement', fontsize=16, fontweight='bold')
         
         # Original room
         original = results[variants[0]]['original']
@@ -419,13 +392,13 @@ class ImprovedProductPlacementPipeline:
         
         # Original product
         axes[0,1].imshow(product_image)
-        axes[0,1].set_title(f'Enhanced {product_type.title()}', fontsize=12, fontweight='bold')
+        axes[0,1].set_title(f'Product: {product_type.title()}', fontsize=12, fontweight='bold')
         axes[0,1].axis('off')
         
         # Enhanced depth map
         depth = results[variants[0]]['depth']
         axes[0,2].imshow(depth, cmap='viridis')
-        axes[0,2].set_title('Enhanced Depth Map', fontsize=12)
+        axes[0,2].set_title('Depth Map', fontsize=12)
         axes[0,2].axis('off')
         
         # First variant result
@@ -436,7 +409,7 @@ class ImprovedProductPlacementPipeline:
                 placement = results[variants[0]]['placement']
                 aspect = placement[2] / placement[3]
                 title += f' (AR: {aspect:.2f}:1)'
-            axes[0,3].set_title(f'{title} ✅', fontsize=11, fontweight='bold')
+            axes[0,3].set_title(f'{title}', fontsize=11, fontweight='bold')
             axes[0,3].axis('off')
         else:
             axes[0,3].axis('off')
@@ -463,7 +436,7 @@ class ImprovedProductPlacementPipeline:
                 placement = results[variants[1]]['placement']
                 aspect = placement[2] / placement[3]
                 title += f' (AR: {aspect:.2f}:1)'
-            axes[1,3].set_title(f'{title} ✅', fontsize=11, fontweight='bold')
+            axes[1,3].set_title(f'{title}', fontsize=11, fontweight='bold')
             axes[1,3].axis('off')
         else:
             for i in range(4):
@@ -476,15 +449,12 @@ class ImprovedProductPlacementPipeline:
         fig.savefig(comparison_path, dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"✅ Saved enhanced comparison: {comparison_path.name}")
+        print(f"✅ Saved comparison: {comparison_path.name}")
         return comparison_path
         
     def run_improved_pipeline(self):
         """Run the improved product placement pipeline with new assets"""
-        print("\n" + "="*80)
-        print("🚀 STARTING IMPROVED PRODUCT PLACEMENT PIPELINE")
-        print("🎯 Using new assets: tv_1.png + painting_1.png")
-        print("="*80)
+        print("🚀 Starting Generative Pipeline...")
         
         # Setup pipeline
         self.setup_pipeline()
@@ -494,10 +464,6 @@ class ImprovedProductPlacementPipeline:
         
         # Process TV using tv_1.png
         try:
-            print("\n" + "="*50)
-            print("📺 PROCESSING IMPROVED TV (tv_1.png)")
-            print("="*50)
-            
             tv_product_path = "assets/tv_1.png"
             tv_product = self.load_product_image(tv_product_path)
             
@@ -505,18 +471,12 @@ class ImprovedProductPlacementPipeline:
             
             if tv_results:
                 self.create_enhanced_comparison(tv_results, "tv", tv_product)
-            else:
-                print("❌ No TV results generated")
                 
         except Exception as e:
             print(f"❌ TV processing failed: {e}")
             
         # Process Painting using painting_1.png
         try:
-            print("\n" + "="*50)
-            print("🖼️ PROCESSING IMPROVED PAINTING (painting_1.png)")
-            print("="*50)
-            
             painting_product_path = "assets/painting_1.png"
             painting_product = self.load_product_image(painting_product_path)
             
@@ -524,19 +484,12 @@ class ImprovedProductPlacementPipeline:
             
             if painting_results:
                 self.create_enhanced_comparison(painting_results, "painting", painting_product)
-            else:
-                print("❌ No painting results generated")
                 
         except Exception as e:
             print(f"❌ Painting processing failed: {e}")
             
-        print("\n" + "="*80)
-        print("✅ IMPROVED PRODUCT PLACEMENT PIPELINE COMPLETE")
-        print("🎯 Enhanced detail preservation, optimal alignment, preserved aspect ratios")
-        print("📺 TV variants: 42\" + 55\" with preserved details and proper aspect ratio")
-        print("🖼️ Painting variants: Medium + Large with enhanced detail preservation")
-        print(f"📁 Results saved in: {self.run_dir}")
-        print("="*80)
+        print("✅ Generative Pipeline Complete")
+        print(f"📁 Results: {self.run_dir}")
 
 def main():
     """Main execution function"""
