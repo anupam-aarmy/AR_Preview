@@ -32,14 +32,12 @@ def check_sam_installation():
         import torch
         from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
         return True
-    except ImportError as e:
-        print(f"❌ SAM not installed: {e}")
+    except ImportError:
+        print("❌ SAM not installed. Please install: pip install git+https://github.com/facebookresearch/segment-anything.git")
         return False
 
 def setup_sam():
     """Setup SAM model and download checkpoint if needed"""
-    print("🔧 Setting up SAM...")
-    
     import torch
     from segment_anything import SamAutomaticMaskGenerator, sam_model_registry
     
@@ -54,9 +52,7 @@ def setup_sam():
         print("📥 Downloading SAM checkpoint...")
         url = "https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth"
         urllib.request.urlretrieve(url, sam_checkpoint)
-        print(f"✅ Downloaded SAM checkpoint to {sam_checkpoint}")
-    else:
-        print(f"✅ SAM checkpoint found: {sam_checkpoint}")
+        print("✅ SAM checkpoint downloaded")
     
     # Load SAM model
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -76,7 +72,7 @@ def setup_sam():
         min_mask_region_area=1000,
     )
     
-    print(f"🎯 SAM ready on {device}")
+    print(f"🎯 SAM initialized ({device})")
     return mask_generator, device
 
 class FixedDeterministicPipeline:
@@ -89,11 +85,8 @@ class FixedDeterministicPipeline:
         self.run_dir = self.output_dir / f"run_aspect_corrected_{self.timestamp}"
         self.run_dir.mkdir(exist_ok=True)
         
-        print("🔧 TASK 1: ASPECT CORRECTED DETERMINISTIC PIPELINE")
-        print("✅ Products use ACTUAL aspect ratios from input images")
-        print("✅ No more hardcoded 16:9 for TVs or 1:1 for paintings")
-        print("✅ Placement rectangles match actual product proportions")
-        print(f"📁 Output: {self.run_dir}")
+        print("🔧 Task 1: Deterministic Pipeline (SAM + OpenCV)")
+        print(f"📁 Output directory: {self.run_dir}")
         
     def load_and_enhance_product(self, product_path):
         """Load product image with enhanced preprocessing"""
@@ -126,21 +119,16 @@ class FixedDeterministicPipeline:
         
         product_enhanced = np.array(product_pil)
         
-        print(f"✅ Loaded and enhanced product: {product.shape} from {Path(product_path).name}")
         return product_enhanced, alpha
         
     def get_actual_product_aspect_ratio(self, product_image):
         """Get the ACTUAL aspect ratio of the product image"""
         h, w = product_image.shape[:2]
         aspect_ratio = w / h
-        
-        print(f"🔍 ACTUAL product dimensions: {w}x{h}, aspect ratio: {aspect_ratio:.3f}:1")
         return aspect_ratio
         
     def segment_wall_with_sam(self, image, mask_generator):
         """Segment wall using SAM with enhanced selection"""
-        print("🎯 Segmenting walls with SAM...")
-        
         # Convert BGR to RGB for SAM
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         
@@ -149,8 +137,6 @@ class FixedDeterministicPipeline:
         
         if not masks:
             raise ValueError("No masks found by SAM")
-            
-        print(f"🔍 SAM found {len(masks)} segments")
         
         # Sort masks by area (largest first)
         masks = sorted(masks, key=lambda x: x['area'], reverse=True)
@@ -180,7 +166,7 @@ class FixedDeterministicPipeline:
                 center_y_norm = center_y / h
             else:
                 continue
-                
+            
             # Wall scoring criteria (enhanced)
             score = 0
             
@@ -205,19 +191,15 @@ class FixedDeterministicPipeline:
             if score > best_score:
                 best_score = score
                 best_wall_mask = mask_array
-                
-            print(f"   Segment {i}: area={area_ratio:.3f}, center=({center_x_norm:.2f},{center_y_norm:.2f}), "
-                  f"aspect={aspect_ratio:.2f}, score={score:.1f}")
         
         if best_wall_mask is None:
             # Fallback: use largest mask
-            print("⚠️ Using largest mask as fallback")
             best_wall_mask = masks[0]['segmentation']
             
         # Convert boolean mask to uint8
         wall_mask = (best_wall_mask * 255).astype(np.uint8)
         
-        print(f"✅ Selected wall mask with score: {best_score:.1f}")
+        print(f"🎯 Wall detected (confidence: {best_score:.1f}/100)")
         return wall_mask
         
     def calculate_dimensions_using_actual_aspect(self, room_shape, product_image, product_type, size_variant="default"):
@@ -230,18 +212,14 @@ class FixedDeterministicPipeline:
         # Calculate width based on product type and size variant
         if product_type == "tv":
             if size_variant == "large":
-                # Large TV: 35% of room width
-                product_w = int(w * 0.35)
+                product_w = int(w * 0.35)  # Large TV: 35% of room width
             else:
-                # Standard TV: 28% of room width
-                product_w = int(w * 0.28)
+                product_w = int(w * 0.28)  # Standard TV: 28% of room width
         else:  # painting
             if size_variant == "large":
-                # Large painting: 22% of room width
-                product_w = int(w * 0.22)
+                product_w = int(w * 0.22)  # Large painting: 22% of room width
             else:
-                # Standard painting: 18% of room width
-                product_w = int(w * 0.18)
+                product_w = int(w * 0.18)  # Standard painting: 18% of room width
         
         # Calculate height using ACTUAL aspect ratio of the product
         product_h = int(product_w / actual_aspect)
@@ -255,13 +233,8 @@ class FixedDeterministicPipeline:
         if product_h > max_h:
             product_h = max_h
             product_w = int(product_h * actual_aspect)
-                
-        print(f"📐 {product_type} ({size_variant}): {product_w}x{product_h} "
-              f"({product_w/w*100:.0f}%x{product_h/h*100:.0f}%)")
         
-        final_aspect = product_w / product_h
-        print(f"   🎯 Final aspect ratio: {final_aspect:.3f}:1 (matches input: {actual_aspect:.3f}:1)")
-            
+        print(f"📐 {product_type} ({size_variant}): {product_w}×{product_h} px, aspect ratio {actual_aspect:.3f}:1")
         return product_w, product_h
         
     def find_safe_wall_position(self, wall_mask, product_w, product_h, product_type):
@@ -281,16 +254,12 @@ class FixedDeterministicPipeline:
         wall_width = wall_right - wall_left
         wall_height = wall_bottom - wall_top
         
-        print(f"📏 Wall bounds: [{wall_left}-{wall_right}, {wall_top}-{wall_bottom}] = {wall_width}x{wall_height}")
-        
         # Ensure product fits within wall bounds
         if product_w > wall_width:
             product_w = wall_width - 20  # Leave 20px margin
-            print(f"⚠️ Product width adjusted to fit wall: {product_w}")
             
         if product_h > wall_height:
             product_h = wall_height - 20  # Leave 20px margin  
-            print(f"⚠️ Product height adjusted to fit wall: {product_h}")
         
         # Center horizontally in wall area
         center_x = wall_left + wall_width // 2
@@ -315,19 +284,13 @@ class FixedDeterministicPipeline:
         end_y = start_y + product_h
         
         if end_x > wall_right or end_y > wall_bottom:
-            print(f"⚠️ Position still exceeds wall bounds, adjusting...")
             start_x = wall_right - product_w
             start_y = wall_bottom - product_h
-        
-        print(f"📍 Safe position: ({start_x}, {start_y}) -> ({end_x}, {end_y})")
-        print(f"   Wall position: {(start_y-wall_top)/wall_height*100:.1f}% from wall top")
         
         return start_x, start_y, product_w, product_h
         
     def place_product_filling_area(self, room_image, product_image, alpha_channel, start_x, start_y, product_w, product_h):
         """Place product COMPLETELY FILLING the designated area"""
-        
-        print(f"🎨 Filling area {product_w}x{product_h} at ({start_x}, {start_y})")
         
         # Resize product to EXACTLY fill the area
         product_pil = Image.fromarray(product_image)
@@ -338,8 +301,6 @@ class FixedDeterministicPipeline:
         product_resized = enhancer.enhance(1.1)
         
         product_final = np.array(product_resized)
-        
-        print(f"📏 Product resized: {product_image.shape[:2]} -> {product_final.shape[:2]}")
         
         # Handle alpha channel
         if alpha_channel is not None:
@@ -360,13 +321,12 @@ class FixedDeterministicPipeline:
                 alpha_norm * product_final[:, :, c] + 
                 (1 - alpha_norm) * result[start_y:start_y+product_h, start_x:start_x+product_w, c]
             )
-            
-        print(f"✅ Product placed filling ENTIRE area at ({start_x}, {start_y})")
+        
         return result
         
     def process_single_product(self, room_path, product_path, product_type, mask_generator):
         """Process a single product with FIXED sizing and positioning"""
-        print(f"\n🎯 Processing {product_type}: {Path(product_path).name}")
+        print(f"🎯 Processing {product_type}: {Path(product_path).name}")
         
         # Load room image
         room_image = cv2.imread(room_path)
@@ -376,8 +336,6 @@ class FixedDeterministicPipeline:
         # Load and enhance product
         product_image, alpha_channel = self.load_and_enhance_product(product_path)
         
-        print(f"✅ Room loaded: {room_image.shape}")
-        
         # Segment wall with SAM
         wall_mask = self.segment_wall_with_sam(room_image, mask_generator)
         
@@ -386,8 +344,6 @@ class FixedDeterministicPipeline:
         results = {}
         
         for variant in variants:
-            print(f"\n📏 Processing {variant} size...")
-            
             # Calculate ACTUAL dimensions using real product aspect ratios
             product_w, product_h = self.calculate_dimensions_using_actual_aspect(
                 room_image.shape, product_image, product_type, variant
@@ -416,21 +372,20 @@ class FixedDeterministicPipeline:
             result_path = self.run_dir / f"{product_type}_{variant}_aspect_corrected_{self.timestamp}.png"
             result_bgr = cv2.cvtColor(result, cv2.COLOR_RGB2BGR)
             cv2.imwrite(str(result_path), result_bgr)
-            print(f"✅ Saved: {result_path.name}")
+            print(f"✅ Saved {variant}: {result_path.name}")
             
         return results
         
     def create_fixed_comparison(self, results, product_type, product_image):
         """Create comparison showing FIXED implementation"""
-        print(f"📊 Creating FIXED {product_type} comparison...")
-        
         variants = list(results.keys())
         if len(variants) == 0:
             return None
             
-        # Create figure
+        # Create figure with reduced matplotlib verbosity
+        plt.rcParams['figure.max_open_warning'] = 0
         fig, axes = plt.subplots(2, 4, figsize=(20, 10))
-        fig.suptitle(f'Task 1: FIXED Deterministic {product_type.title()} Placement (Products Fill Masks)', 
+        fig.suptitle(f'Task 1: Deterministic {product_type.title()} Placement', 
                      fontsize=16, fontweight='bold')
         
         # Original room
@@ -455,7 +410,7 @@ class FixedDeterministicPipeline:
         placement = results[variants[0]]['placement']
         aspect = placement[2] / placement[3]
         title = f'{variants[0].title()} Size (AR: {aspect:.2f}:1)'
-        axes[0,3].set_title(f'{title} ✅', fontsize=11, fontweight='bold')
+        axes[0,3].set_title(f'{title}', fontsize=11, fontweight='bold')
         axes[0,3].axis('off')
         
         # Bottom row
@@ -490,7 +445,7 @@ class FixedDeterministicPipeline:
             axes[1,3].imshow(results[variants[1]]['result'])
             aspect = placement2[2] / placement2[3]
             title = f'{variants[1].title()} Size (AR: {aspect:.2f}:1)'
-            axes[1,3].set_title(f'{title} ✅', fontsize=11, fontweight='bold')
+            axes[1,3].set_title(f'{title}', fontsize=11, fontweight='bold')
             axes[1,3].axis('off')
         else:
             for i in range(4):
@@ -503,23 +458,15 @@ class FixedDeterministicPipeline:
         fig.savefig(comparison_path, dpi=150, bbox_inches='tight')
         plt.close()
         
-        print(f"✅ Saved FIXED comparison: {comparison_path.name}")
+        print(f"✅ Saved comparison: {comparison_path.name}")
         return comparison_path
         
     def run_aspect_corrected_pipeline(self):
         """Run the FIXED deterministic pipeline"""
-        print("\n" + "="*80)
-        print("🚀 STARTING ASPECT CORRECTED DETERMINISTIC PIPELINE")
-        print("🎯 Using new assets: tv_1.png + painting_1.png")
-        print("✅ CORRECTED: Using ACTUAL aspect ratios from input images")
-        print("✅ CORRECTED: No hardcoded 16:9 or 1:1 ratios")
-        print("✅ CORRECTED: Placement rectangles match product proportions")
-        print("="*80)
+        print("🚀 Starting Deterministic Pipeline...")
         
         # Check SAM installation
         if not check_sam_installation():
-            print("❌ Please install SAM first:")
-            print("   pip install git+https://github.com/facebookresearch/segment-anything.git")
             return None
             
         # Setup SAM
@@ -530,10 +477,6 @@ class FixedDeterministicPipeline:
         
         # Process TV using tv_1.png
         try:
-            print("\n" + "="*50)
-            print("📺 PROCESSING FIXED TV (tv_1.png)")
-            print("="*50)
-            
             tv_product_path = "assets/tv_1.png"
             tv_product, _ = self.load_and_enhance_product(tv_product_path)
             
@@ -541,20 +484,12 @@ class FixedDeterministicPipeline:
             
             if tv_results:
                 self.create_fixed_comparison(tv_results, "tv", tv_product)
-            else:
-                print("❌ No TV results generated")
                 
         except Exception as e:
             print(f"❌ TV processing failed: {e}")
-            import traceback
-            traceback.print_exc()
             
         # Process Painting using painting_1.png
         try:
-            print("\n" + "="*50)
-            print("🖼️ PROCESSING FIXED PAINTING (painting_1.png)")
-            print("="*50)
-            
             painting_product_path = "assets/painting_1.png"
             painting_product, _ = self.load_and_enhance_product(painting_product_path)
             
@@ -562,22 +497,12 @@ class FixedDeterministicPipeline:
             
             if painting_results:
                 self.create_fixed_comparison(painting_results, "painting", painting_product)
-            else:
-                print("❌ No painting results generated")
                 
         except Exception as e:
             print(f"❌ Painting processing failed: {e}")
-            import traceback
-            traceback.print_exc()
             
-        print("\n" + "="*80)
-        print("✅ ASPECT CORRECTED DETERMINISTIC PIPELINE COMPLETE")
-        print("🎯 Products use ACTUAL aspect ratios from input images")
-        print("📺 TV variants: Use real TV proportions (not forced 16:9)")
-        print("🖼️ Painting variants: Use real painting proportions (not forced 1:1)")
-        print("📐 Placement rectangles now match actual product aspect ratios")
-        print(f"📁 Results saved in: {self.run_dir}")
-        print("="*80)
+        print("✅ Deterministic Pipeline Complete")
+        print(f"📁 Results: {self.run_dir}")
 
 def main():
     """Main execution function"""
