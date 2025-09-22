@@ -1,16 +1,7 @@
 ###############################
-# Dependency Set (Option B)
-# "Modern stable" (not bleeding edge, not legacy) pinned versions chosen
-# for CPU compatibility & ControlNet depth integration.
-# Rationale:
-#  - diffusers 0.30.x: Mature ControlNet + inpaint support, before larger API shifts (>=0.35)
-#  - transformers 4.41.x: Compatible with diffusers 0.30.x without newer tokenizer breaking changes
-#  - accelerate 0.31.x: Scheduler / device placement improvements, stable with above
-#  - huggingface_hub >=0.23 <0.24: Provides newer download APIs while avoiding breaking deprecations
-#  - controlnet-aux 0.0.7: Includes MiDaS / depth processors needed
-#  - scikit-image 0.22.x: Stable SSIM implementation
-#  - xformers kept optional; stubbed in code when absent on CPU
-# If running on GPU and wanting memory savings, install a matching xformers build manually.
+# Dependency Set (Production Content-Preserving)
+# Stable versions for content-preserving generative AI
+# Optimized for exact product content preservation with lighting integration
 ###############################
 
 # Core AI and Vision Libraries
@@ -23,13 +14,13 @@ numpy>=1.26.0,<2.0.0
 # Meta's Segment Anything Model (SAM)
 segment-anything>=1.0
 
-# Generative AI Pipeline (AIP-2) - Assignment Task 2
-diffusers==0.21.4            # Stable Diffusers with inpaint, avoids new loader API
-transformers==4.41.2         # Compatible with diffusers 0.30.x
+# Content-Preserving Generative AI Pipeline - Assignment Task 2
+diffusers==0.31.0            # Latest stable with ControlNet inpainting support
+transformers==4.41.2         # Compatible with diffusers 0.31.0
 accelerate==0.31.0           # Device / distributed utilities
-huggingface_hub>=0.23.0,<0.24.0
+huggingface_hub>=0.23.0,<0.25.0
 controlnet-aux==0.0.7        # Depth / pre-processing helpers
-xformers ; platform_system != 'Windows'  # Optional (skip pin; stubbed on CPU if missing)
+xformers ; platform_system != 'Windows'  # Optional memory optimization
 pillow>=10.2.0               # Image processing
 scikit-image==0.22.0         # SSIM metrics
 
@@ -41,6 +32,8 @@ pathlib2
 requests>=2.31.0
 
 # Notes:
-# - If installation fails for torch pinned wheels, remove version spec and install via official instructions.
-# - For GPU acceleration: reinstall torch/torchvision with CUDA (e.g. pip install torch==2.3.1+cu121 ... from PyTorch index).
-# - xformers is optional; code provides a safe stub when unavailable (especially on Windows CPU).
+# - Content-preserving pipeline preserves exact product appearance
+# - Focus on lighting integration rather than content generation  
+# - If installation fails for torch pinned wheels, remove version spec and install via official instructions
+# - For GPU acceleration: reinstall torch/torchvision with CUDA support
+# - xformers is optional; code provides safe fallback when unavailable

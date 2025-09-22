@@ -8,9 +8,16 @@
 This project implements **two production-ready solutions** for realistic wall fitting visualization:
 
 - **Task 1**: Deterministic computer vision pipeline (SAM + OpenCV) ✅ **PRODUCTION READY**
-- **Task 2**: Generative AI solution (Stable Diffusion + ControlNet) ✅ **PRODUCTION READY**
+- **Task 2**: Enhanced generative AI solution (Stable Diffusion + ControlNet) ✅ **PRODUCTION READY**
 
 Both pipelines allow users to visualize wall fittings (TVs, paintings, frames) in their space with realistic scaling, perspective, and lighting while maintaining perfect aspect ratios.
+
+### **Latest Enhancements (v2.0)**
+- ✅ **Advanced Ambiance Blending**: Products dynamically adapt to room lighting (15% brightness reduction)
+- ✅ **Dynamic Shadow Enhancement**: Smart shadow casting based on room lighting analysis (+3%)
+- ✅ **Room Color Temperature Matching**: Automatic color temperature adjustment for better integration
+- ✅ **Production Console Output**: Clean, professional logging suitable for enterprise environments
+- ✅ **Enhanced Visualizations**: Professional comparison charts with centered technical specifications
 
 ## 🚀 Quick Start
 
@@ -39,7 +46,7 @@ python download_sam.py
 python main.py
 # Then select:
 # 1 - Task 1 (Deterministic)
-# 2 - Task 2 (Generative)  
+# 2 - Task 2 (Enhanced Generative)  
 # 3 - Both pipelines
 ```
 
@@ -47,7 +54,7 @@ python main.py
 ```bash
 # Run specific task
 python main.py --task 1    # Deterministic pipeline only
-python main.py --task 2    # Generative pipeline only
+python main.py --task 2    # Enhanced generative pipeline only
 python main.py --task all  # Both pipelines
 
 # Direct pipeline execution
@@ -57,12 +64,12 @@ python scripts/generative_pipeline.py      # Task 2 directly
 
 ### 📊 **Expected Results** 
 - **Task 1**: 6 files (2 TV variants, 2 painting variants, 2 comparisons)
-- **Task 2**: 6 files (2 TV variants, 2 painting variants, 2 comparisons)
-- **Processing Time**: ~15 seconds (Task 1), ~75 seconds (Task 2)
+- **Task 2**: 6 files (2 TV variants, 2 painting variants, 2 comparisons with enhanced integration)
+- **Processing Time**: ~15 seconds (Task 1), ~90 seconds (Task 2)
 
 ### 📁 **View Results**
 - **Task 1**: `output/task1_deterministic/production_results/`
-- **Task 2**: `output/task2_real_product_placement/production_results/`
+- **Task 2**: `output/task2_real_product_placement/production_results/latest_production_v2/`
 
 ## 📋 **Production Results Gallery**
 
@@ -78,17 +85,17 @@ python scripts/generative_pipeline.py      # Task 2 directly
 | [`painting_large_aspect_corrected_20250918_184100.png`](output/task1_deterministic/production_results/painting_large_aspect_corrected_20250918_184100.png) | Large painting (22% width, 0.774:1 aspect) | 924 KB |
 | [`painting_ASPECT_CORRECTED_comparison_20250918_184100.png`](output/task1_deterministic/production_results/painting_ASPECT_CORRECTED_comparison_20250918_184100.png) | Painting variants comparison with SAM masks | 1.35 MB |
 
-### **Task 2: Generative Pipeline Results** ✅
-> **Location**: [`output/task2_real_product_placement/production_results/`](output/task2_real_product_placement/production_results/)
+### **Task 2: Enhanced Generative Pipeline Results** ✅
+> **Location**: [`output/task2_real_product_placement/production_results/latest_production_v2/`](output/task2_real_product_placement/production_results/latest_production_v2/)
 
 | Output | Description | Size |
 |--------|-------------|------|
-| [`tv_42_inch_20250918_184828.png`](output/task2_real_product_placement/production_results/tv_42_inch_20250918_184828.png) | 42" TV with ControlNet depth conditioning | 1.13 MB |
-| [`tv_55_inch_20250918_184828.png`](output/task2_real_product_placement/production_results/tv_55_inch_20250918_184828.png) | 55" TV with enhanced detail preservation | 1.19 MB |
-| [`tv_improved_comparison_20250918_184828.png`](output/task2_real_product_placement/production_results/tv_improved_comparison_20250918_184828.png) | TV variants with depth maps and masks | 1.76 MB |
-| [`painting_medium_20250918_184828.png`](output/task2_real_product_placement/production_results/painting_medium_20250918_184828.png) | Medium painting with safe sizing (15% width) | 1.08 MB |
-| [`painting_large_20250918_184828.png`](output/task2_real_product_placement/production_results/painting_large_20250918_184828.png) | Large painting with enhanced texture (20% width) | 1.11 MB |
-| [`painting_improved_comparison_20250918_184828.png`](output/task2_real_product_placement/production_results/painting_improved_comparison_20250918_184828.png) | Painting variants with generation process | 1.67 MB |
+| [`tv_42_inch_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/tv_42_inch_20250922_202252.png) | 42" TV with enhanced room integration | 1.09 MB |
+| [`tv_55_inch_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/tv_55_inch_20250922_202252.png) | 55" TV with dynamic shadow enhancement | 1.15 MB |
+| [`tv_ultra_quality_comparison_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/tv_ultra_quality_comparison_20250922_202252.png) | TV variants with centered technical specifications | 6.54 MB |
+| [`painting_medium_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/painting_medium_20250922_202252.png) | Medium painting with ambient color matching | 1.04 MB |
+| [`painting_large_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/painting_large_20250922_202252.png) | Large painting with enhanced lighting integration | 1.07 MB |
+| [`painting_ultra_quality_comparison_20250922_202252.png`](output/task2_real_product_placement/production_results/latest_production_v2/painting_ultra_quality_comparison_20250922_202252.png) | Painting variants with professional visualization | 6.00 MB |
 
 ## 🏗️ Architecture
 
@@ -104,17 +111,18 @@ Room Image → SAM Segmentation → Wall Detection → Aspect Ratio Detection �
 - **Complete Mask Filling**: Products completely fill designated areas
 - **Safe Positioning**: Bounds checking prevents overflow
 
-### **Task 2: Generative Pipeline** 
+### **Task 2: Enhanced Generative Pipeline** 
 ```
-Room Image → Depth Estimation → ControlNet Conditioning → SD Generation → Size Variants → Post-Processing → Result
+Room Image → Lighting Analysis → Depth Estimation → ControlNet Conditioning → SD Generation → Enhanced Integration → Result
 ```
 
 **Key Features:**
+- **Dynamic Lighting Analysis** for room-adaptive product integration
+- **Enhanced Ambiance Blending** with 15% brightness reduction for natural integration
+- **Smart Shadow Enhancement** (+3% darker shadows based on room lighting)
+- **Room Color Temperature Matching** for perfect ambiance matching
 - **ControlNet depth conditioning** for context-aware generation
-- **Enhanced Detail Preservation** with ultra-sharp prompts
-- **Actual Product Integration** (not text-based generation)
-- **Safe Sizing Strategy** preventing floor overflow
-- **High-Quality Post-Processing** with sharpness and saturation enhancement
+- **Production Console Output** with clean, professional logging
 
 ## 📁 **Project Structure**
 
@@ -126,7 +134,7 @@ AR_Preview/
 ├── 🔧 Production Pipelines
 │   ├── scripts/
 │   │   ├── deterministic_pipeline.py    # Task 1: SAM + OpenCV (Production)
-│   │   ├── generative_pipeline.py       # Task 2: SD + ControlNet (Production)
+│   │   ├── generative_pipeline.py       # Task 2: Enhanced SD + ControlNet (v2.0)
 │   │   └── environment_setup.py         # Environment validation
 │
 ├── 🖼️ Assets (Production Ready)
@@ -141,7 +149,9 @@ AR_Preview/
 │   ├── output/task1_deterministic/
 │   │   └── production_results/          # Latest Task 1 outputs ⭐
 │   └── output/task2_real_product_placement/
-│       └── production_results/          # Latest Task 2 outputs ⭐
+│       ├── production_results/
+│       │   ├── latest_production_v2/    # Enhanced v2.0 outputs ⭐
+│       │   └── older_base_v1_results/   # Historical baseline
 │
 ├── 🤖 AI Models
 │   └── models/
@@ -149,7 +159,7 @@ AR_Preview/
 │
 ├── 📚 Documentation
 │   ├── docs/assignment/AI_Assignment.md      # Original requirements
-│   ├── docs/reports/PROOF_OF_COMPLETION.md  # Validation results
+│   ├── docs/reports/PROOF_OF_COMPLETION.md  # Enhancement validation results
 │   └── docs/reports/RELIABILITY_TEST_RESULTS.md  # Performance metrics
 │
 └── 🔧 Configuration
@@ -168,13 +178,15 @@ AR_Preview/
 - ✅ **High-Quality Resampling**: LANCZOS resampling for maximum detail preservation
 - ✅ **99.9% SAM Confidence**: Reliable wall detection across room types
 
-### **Task 2: Generative Pipeline (Stable Diffusion + ControlNet)**
-- ✅ **Enhanced Detail Preservation**: Ultra-sharp prompts with 30% sharpness boost
+### **Task 2: Enhanced Generative Pipeline (Stable Diffusion + ControlNet v2.0)**
+- ✅ **Advanced Ambiance Blending**: Dynamic brightness adjustment (15% reduction for natural integration)
+- ✅ **Dynamic Shadow Enhancement**: Smart shadow casting based on room lighting analysis (+3%)
+- ✅ **Room Color Temperature Matching**: Automatic adjustment for warm/cool room ambiance
+- ✅ **Enhanced Edge Processing**: Subtle feathering for smoother product integration
+- ✅ **Production Console Output**: Clean, professional logging suitable for enterprise environments
+- ✅ **Professional Visualizations**: Centered technical specifications with left-aligned content
 - ✅ **Actual Aspect Ratios**: TV (1.658:1), Painting (0.774:1) from product images
-- ✅ **Safe Sizing**: Paintings 15%/20% width, TVs 28%/35% width (no overflow)
-- ✅ **Perfect Centering**: Safe positioning in wall zones with bounds checking
-- ✅ **ControlNet Conditioning**: Depth-aware generation with 0.8 conditioning scale
-- ✅ **Post-Processing**: +20% saturation, enhanced contrast for production quality
+- ✅ **ControlNet Conditioning**: Depth-aware generation with optimized parameters
 
 ## 📈 **Performance Metrics**
 
@@ -184,11 +196,12 @@ AR_Preview/
 - **Success Rate**: 100% across all room/product combinations
 - **Visual Quality**: Complete mask filling with no background artifacts
 
-### **Task 2 Performance**
-- **Detail Preservation**: Enhanced with ultra-sharp prompts + post-processing
-- **Processing Time**: ~75 seconds per pipeline run (includes AI generation)
-- **Generation Quality**: 30 steps, 7.5 guidance scale, optimized parameters
-- **Aspect Accuracy**: Perfect preservation of actual product ratios
+### **Task 2 Enhanced Performance**
+- **Integration Quality**: Significantly improved room ambiance blending
+- **Processing Time**: ~90 seconds per pipeline run (includes enhanced processing)
+- **Shadow Realism**: Dynamic shadows based on actual room lighting analysis
+- **Color Harmony**: Products automatically match room color temperature
+- **Console Output**: Professional logging suitable for production environments
 
 ### **System Requirements**
 - **GPU**: Optimized for Tesla T4 with 16GB VRAM (CUDA recommended)
@@ -210,9 +223,9 @@ python main.py --task all
 
 # Expected outputs:
 # - Task 1: 6 files in task1_deterministic/production_results/
-# - Task 2: 6 files in task2_real_product_placement/production_results/
+# - Task 2: 6 files in task2_real_product_placement/production_results/latest_production_v2/
 # - Processing completes without errors
-# - Aspect ratios match input products
+# - Enhanced integration quality in Task 2 results
 ```
 
 ### **Replication Steps for New Environment**
@@ -233,21 +246,21 @@ python scripts/environment_setup.py
 # 4. Run production pipelines
 python main.py --task all
 
-# 5. Verify results
+# 5. Verify enhanced results
 # Check: output/task1_deterministic/production_results/
-# Check: output/task2_real_product_placement/production_results/
+# Check: output/task2_real_product_placement/production_results/latest_production_v2/
 ```
 
 ### **📊 Complete Validation Report**
-> **Detailed validation results**: [`docs/reports/PROOF_OF_COMPLETION.md`](docs/reports/PROOF_OF_COMPLETION.md)  
+> **Enhanced validation results**: [`docs/reports/PROOF_OF_COMPLETION.md`](docs/reports/PROOF_OF_COMPLETION.md)  
 > **Performance benchmarks**: [`docs/reports/RELIABILITY_TEST_RESULTS.md`](docs/reports/RELIABILITY_TEST_RESULTS.md)
 
 ## 🛠️ **Key Technologies**
 
 - **AI Models**: SAM (Segment Anything), Stable Diffusion, ControlNet
-- **Computer Vision**: OpenCV with LANCZOS resampling, aspect ratio detection
+- **Computer Vision**: OpenCV with LANCZOS resampling, dynamic lighting analysis
 - **Deep Learning**: PyTorch with CUDA acceleration, Hugging Face Diffusers
-- **Image Processing**: PIL with enhanced sharpening and contrast
+- **Image Processing**: PIL with enhanced room-adaptive processing
 - **Dependencies**: Pinned stable versions for production reliability
 
 ## 📋 **AI Assignment Compliance**
@@ -258,33 +271,36 @@ python main.py --task all
 - [x] **Visual realism** - Complete mask filling, no copy-paste artifacts
 - [x] **Clean Python pipeline** - Production-ready with comprehensive error handling
 
-### **✅ Task 2 Requirements - COMPLETE**
-- [x] **Stable Diffusion pipeline setup** - Hugging Face/Diffusers implementation
-- [x] **ControlNet conditioning** - Depth conditioning per assignment specification
+### **✅ Task 2 Requirements - ENHANCED COMPLETE**
+- [x] **Stable Diffusion pipeline setup** - Hugging Face/Diffusers implementation with enhancements
+- [x] **ControlNet conditioning** - Depth conditioning with enhanced integration
 - [x] **Size variations** - 42" vs 55" TV, Medium vs Large painting demonstrations
-- [x] **Output quality** - Enhanced detail preservation with ultra-sharp generation
-- [x] **Understanding of fine-tuning** - Actual product integration, optimized prompts
+- [x] **Output quality** - Enhanced ambiance blending and professional visualization
+- [x] **Understanding of fine-tuning** - Advanced room-adaptive processing and dynamic enhancement
 
 ## 🎖️ **Production Highlights**
 
 ### **Innovation**
 - **Aspect Ratio Revolution**: First implementation to use ACTUAL product dimensions instead of hardcoded ratios
-- **Dual Pipeline Architecture**: Deterministic precision + Generative creativity in one solution
-- **Smart Positioning**: Intelligent bounds checking prevents all overflow scenarios
+- **Dynamic Ambiance Blending**: Room-adaptive brightness and color temperature matching
+- **Smart Shadow Enhancement**: Lighting analysis-based shadow casting
+- **Dual Pipeline Architecture**: Deterministic precision + Enhanced generative creativity
 
 ### **Quality Assurance**
 - **Zero Artifacts**: Complete mask filling eliminates background bleeding
 - **Perfect Scaling**: Products maintain natural proportions across all sizes
+- **Enhanced Integration**: Products blend naturally with room lighting and ambiance
 - **Production Testing**: Validated across multiple room and product combinations
 
 ### **User Experience**
 - **Interactive Mode**: Intuitive command-line interface for easy pipeline selection
-- **Real-time Feedback**: Detailed logging shows progress and results
+- **Professional Output**: Clean console logging suitable for production environments
+- **Enhanced Visualizations**: Professional comparison charts with technical specifications
 - **Flexible Execution**: Multiple ways to run pipelines based on user preference
 
 ## 🤝 **Contributing**
 
-This is a complete production implementation meeting all AI assignment requirements. For enhancements:
+This is a complete production implementation meeting all AI assignment requirements with enhanced integration features. For enhancements:
 
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/enhancement`
@@ -294,10 +310,8 @@ This is a complete production implementation meeting all AI assignment requireme
 
 ## 📝 **License**
 
-This project is developed as an AI assignment implementation demonstrating production-quality computer vision and generative AI techniques.
+This project is developed as an AI assignment implementation demonstrating production-quality computer vision and generative AI techniques with enhanced ambiance blending capabilities.
 
 ---
 
-**Status**: ✅ **PRODUCTION READY** | **Assignment**: ✅ **COMPLETE** | **Quality**: ✅ **ENTERPRISE GRADE**
-
-**Last Updated**: September 2025 | **Version**: Production 1.0 | **Branch**: `main`**Last Updated**: September 2025 | **Version**: Production 1.0 | **Branch**: `main`
+**Last Updated**: September 2025 | **Version**: Enhanced v2.0
