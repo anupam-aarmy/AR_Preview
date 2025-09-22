@@ -546,17 +546,17 @@ class UltraHighQualityProductGenerationPipeline:
         depth_rgb = cv2.cvtColor(depth_map, cv2.COLOR_GRAY2RGB)
         depth_pil = Image.fromarray(depth_rgb)
         
-        # Create AGGRESSIVE prompts for EXACT reproduction
+        # Create AGRESSIVE prompts for EXACT reproduction
         structural_info = product_features['structural_details']
         
         if product_type == "tv":
-            # AGGRESSIVE TV prompts with EXACT content specification
+            # AGRESSIVE TV prompts with EXACT content specification
             prompt = f"EXACT television displaying {product_features['detailed_description']}, {size_variant.replace('_', '-')} LED TV, VISIBLE screen content, {product_features['colors']}, realistic display, professional mounting"
             
             negative_prompt = "blank screen, black screen, gray screen, empty display, turned off TV, dark display, no content, blank, empty"
             
         else:  # painting
-            # AGGRESSIVE artwork prompts with EXACT appearance
+            # AGRESSIVE artwork prompts with EXACT appearance
             prompt = f"EXACT {product_features['detailed_description']}, {size_variant} framed artwork, {product_features['colors']}, visible artwork content, museum quality frame"
             
             negative_prompt = "blank canvas, empty frame, white canvas, no artwork, plain frame, empty painting, blank picture"
@@ -593,7 +593,7 @@ class UltraHighQualityProductGenerationPipeline:
         
     def process_single_product_ultra(self, room_path, product_path, product_type):
         """Process a single product with ultra-high quality generation"""
-        print(f"🎯 Processing ultra-quality {product_type}: {Path(product_path).name}")
+        print(f"Processing {product_type}: {Path(product_path).name}")
         
         # Load room image
         room_image = cv2.imread(room_path)
@@ -620,7 +620,7 @@ class UltraHighQualityProductGenerationPipeline:
                 room_image.shape, product_type, variant, product_path
             )
             
-            # Create placement mask
+            # Create placement mask (this will be updated in content_preserving_placement)
             mask, placement_info = self.create_placement_mask(
                 room_image.shape, product_w, product_h, product_type
             )
@@ -644,10 +644,10 @@ class UltraHighQualityProductGenerationPipeline:
                 # Save individual result
                 result_path = self.run_dir / f"{product_type}_{variant}_{self.timestamp}.png"
                 cv2.imwrite(str(result_path), cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-                print(f"✅ Saved ultra-quality {variant}: {result_path.name}")
+                print(f"✓ Saved {variant}: {result_path.name}")
                 
             except Exception as e:
-                print(f"❌ Content-preserving failed for {variant}, trying hybrid: {e}")
+                print(f"✗ Content-preserving failed for {variant}, trying hybrid: {e}")
                 
                 # Fallback to hybrid approach
                 try:
@@ -668,15 +668,55 @@ class UltraHighQualityProductGenerationPipeline:
                     # Save individual result
                     result_path = self.run_dir / f"{product_type}_{variant}_{self.timestamp}.png"
                     cv2.imwrite(str(result_path), cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-                    print(f"✅ Saved ultra-quality {variant}: {result_path.name}")
+                    print(f"✓ Saved {variant}: {result_path.name}")
                     
                 except Exception as e2:
-                    print(f"❌ Failed to generate {variant}: {e2}")
+                    print(f"✗ Failed to generate {variant}: {e2}")
                 
         return results
         
-    def create_smart_mask(self, room_shape, product_w, product_h, product_type):
-        """Create smart mask that only paints around the product, not the product itself"""
+    def analyze_room_lighting(self, room_image):
+        """Analyze room lighting to determine shadow direction dynamically"""
+        h, w = room_image.shape[:2]
+        
+        # Convert to HSV for better lighting analysis
+        hsv = cv2.cvtColor(room_image, cv2.COLOR_BGR2HSV)
+        gray = cv2.cvtColor(room_image, cv2.COLOR_BGR2GRAY)
+        
+        # Analyze brightness in different regions
+        left_region = gray[:, :w//3]
+        right_region = gray[:, 2*w//3:]
+        top_region = gray[:h//3, :]
+        bottom_region = gray[2*h//3:, :]
+        
+        # Calculate average brightness for each region
+        left_brightness = np.mean(left_region)
+        right_brightness = np.mean(right_region)
+        top_brightness = np.mean(top_region)
+        bottom_brightness = np.mean(bottom_region)
+        
+        # Determine light source direction based on brightness
+        horizontal_light = "left" if left_brightness > right_brightness else "right"
+        vertical_light = "top" if top_brightness > bottom_brightness else "bottom"
+        
+        # Shadow direction is opposite to light source
+        shadow_h = "right" if horizontal_light == "left" else "left"
+        shadow_v = "bottom" if vertical_light == "top" else "top"
+        
+        # Calculate shadow intensity based on brightness difference
+        h_intensity = abs(left_brightness - right_brightness) / 255.0
+        v_intensity = abs(top_brightness - bottom_brightness) / 255.0
+        
+        return {
+            'shadow_horizontal': shadow_h,
+            'shadow_vertical': shadow_v,
+            'h_intensity': h_intensity,
+            'v_intensity': v_intensity,
+            'light_source': f"{vertical_light}_{horizontal_light}"
+        }
+        
+    def create_smart_mask(self, room_shape, product_w, product_h, product_type, lighting_info):
+        """Create smart mask for realistic shadows based on dynamic lighting analysis"""
         h, w = room_shape[:2]
         
         # Center horizontally in available wall space
@@ -684,10 +724,8 @@ class UltraHighQualityProductGenerationPipeline:
         
         # Natural vertical positioning
         if product_type == "tv":
-            # TVs: Natural viewing height
             start_y = int(h * 0.30)
         else:  # painting
-            # Paintings: Eye-level positioning
             safe_top = int(h * 0.15)
             safe_bottom = int(h * 0.75)
             available_height = safe_bottom - safe_top
@@ -707,26 +745,120 @@ class UltraHighQualityProductGenerationPipeline:
         if start_y + product_h > h:
             start_y = h - product_h
             
-        # Create SMART mask - paint around product, not the product itself
+        # Create dynamic shadow mask based on lighting analysis
         mask = np.zeros((h, w), dtype=np.uint8)
         
-        # Create border around product for shadows and lighting effects
-        border_size = max(10, min(product_w, product_h) // 20)
+        # Dynamic shadow parameters based on lighting - SLIGHTLY INCREASED for 3% darker shadows
+        base_shadow_size = max(6, min(product_w, product_h) // 25)
+        h_shadow_size = int(base_shadow_size * (1 + lighting_info['h_intensity'] * 1.03))  # Slight increase
+        v_shadow_size = int(base_shadow_size * (1 + lighting_info['v_intensity'] * 1.03))  # Slight increase
         
-        # Paint border area around product
+        # Apply shadows based on detected light direction with slightly increased intensity
+        if lighting_info['shadow_horizontal'] == 'right':
+            # Right shadow
+            mask[start_y:start_y+product_h, 
+                 start_x+product_w:min(w, start_x+product_w+h_shadow_size)] = 206  # Slightly darker from 200
+        else:
+            # Left shadow
+            mask[start_y:start_y+product_h,
+                 max(0, start_x-h_shadow_size):start_x] = 206  # Slightly darker from 200
+                
+        if lighting_info['shadow_vertical'] == 'bottom':
+            # Bottom shadow
+            mask[start_y+product_h:min(h, start_y+product_h+v_shadow_size),
+                 start_x:start_x+product_w] = 185  # Slightly darker from 180
+        else:
+            # Top shadow
+            mask[max(0, start_y-v_shadow_size):start_y,
+                 start_x:start_x+product_w] = 185  # Slightly darker from 180
+        
+        # Corner shadow (intersection) - slightly darker
+        corner_intensity = 165  # Slightly darker from 160
+        if lighting_info['shadow_horizontal'] == 'right' and lighting_info['shadow_vertical'] == 'bottom':
+            mask[start_y+product_h:min(h, start_y+product_h+v_shadow_size),
+                 start_x+product_w:min(w, start_x+product_w+h_shadow_size)] = corner_intensity
+        elif lighting_info['shadow_horizontal'] == 'left' and lighting_info['shadow_vertical'] == 'bottom':
+            mask[start_y+product_h:min(h, start_y+product_h+v_shadow_size),
+                 max(0, start_x-h_shadow_size):start_x] = corner_intensity
+        elif lighting_info['shadow_horizontal'] == 'right' and lighting_info['shadow_vertical'] == 'top':
+            mask[max(0, start_y-v_shadow_size):start_y,
+                 start_x+product_w:min(w, start_x+product_w+h_shadow_size)] = corner_intensity
+        else:  # left and top
+            mask[max(0, start_y-v_shadow_size):start_y,
+                 max(0, start_x-h_shadow_size):start_x] = corner_intensity
+        
+        # Subtle wall area for lighting integration - CLOSER to product edges
+        border_size = max(2, min(product_w, product_h) // 50)
         mask[max(0, start_y-border_size):min(h, start_y+product_h+border_size), 
-             max(0, start_x-border_size):min(w, start_x+product_w+border_size)] = 255
+             max(0, start_x-border_size):min(w, start_x+product_w+border_size)] = 80
              
-        # Remove the actual product area to preserve it
+        # Remove the actual product area to preserve it completely
         mask[start_y:start_y+product_h, start_x:start_x+product_w] = 0
         
-        # Add slight feathering for better blending
-        mask = cv2.GaussianBlur(mask, (5, 5), 1.0)
+        # Apply realistic shadow blending with more natural falloff
+        mask = cv2.GaussianBlur(mask, (9, 9), 3.0)
         
         return mask, (start_x, start_y, product_w, product_h)
         
+    def enhance_product_integration(self, product_enhanced, room_lighting_avg, lighting_info):
+        """Enhance product to better match room lighting and ambiance"""
+        
+        # Analyze room's average color temperature and brightness
+        room_brightness = np.mean(room_lighting_avg)
+        room_color_temp = np.mean(room_lighting_avg, axis=(0,1))
+        
+        # Convert product to PIL for better processing
+        product_pil = Image.fromarray(product_enhanced)
+        
+        # Adjust product brightness to match room - REDUCED to blend better
+        brightness_factor = 0.85 + (room_brightness / 255.0) * 0.15  # Reduced from 0.9 + 0.2
+        product_pil = ImageEnhance.Brightness(product_pil).enhance(brightness_factor)
+        
+        # Adjust color temperature slightly to match room ambiance
+        # Warmer rooms (more red/yellow) should warm the product slightly
+        if room_color_temp[0] > room_color_temp[2]:  # More red than blue
+            # Slightly warm the product
+            product_array = np.array(product_pil).astype(np.float32)
+            product_array[:,:,0] *= 1.05  # Slight red boost
+            product_array[:,:,1] *= 1.02  # Slight green boost
+            product_array = np.clip(product_array, 0, 255).astype(np.uint8)
+            product_pil = Image.fromarray(product_array)
+        elif room_color_temp[2] > room_color_temp[0]:  # More blue than red
+            # Slightly cool the product
+            product_array = np.array(product_pil).astype(np.float32)
+            product_array[:,:,2] *= 1.03  # Slight blue boost
+            product_array = np.clip(product_array, 0, 255).astype(np.uint8)
+            product_pil = Image.fromarray(product_array)
+        
+        # Apply subtle saturation adjustment based on room
+        room_saturation = np.std(room_color_temp)
+        if room_saturation < 20:  # Low saturation room
+            product_pil = ImageEnhance.Color(product_pil).enhance(0.95)
+        else:  # Higher saturation room
+            product_pil = ImageEnhance.Color(product_pil).enhance(1.05)
+        
+        # Apply very subtle edge softening for better integration
+        product_array = np.array(product_pil)
+        
+        # Create a subtle edge mask for blending
+        edge_mask = np.ones_like(product_array[:,:,0], dtype=np.float32)
+        edge_size = 3
+        edge_mask[:edge_size, :] *= np.linspace(0.95, 1.0, edge_size)[:, np.newaxis]
+        edge_mask[-edge_size:, :] *= np.linspace(1.0, 0.95, edge_size)[:, np.newaxis]
+        edge_mask[:, :edge_size] *= np.linspace(0.95, 1.0, edge_size)[np.newaxis, :]
+        edge_mask[:, -edge_size:] *= np.linspace(1.0, 0.95, edge_size)[np.newaxis, :]
+        
+        # Apply edge mask very subtly
+        for c in range(3):
+            product_array[:,:,c] = (product_array[:,:,c] * edge_mask).astype(np.uint8)
+        
+        return product_array
+        
     def create_content_preserving_placement(self, room_image, product_features, mask, depth_map, placement_info, product_type, size_variant):
         """Create placement that preserves original product content completely"""
+        
+        # Analyze room lighting dynamically
+        lighting_info = self.analyze_room_lighting(room_image)
         
         # Start with direct placement
         h, w = room_image.shape[:2]
@@ -739,17 +871,22 @@ class UltraHighQualityProductGenerationPipeline:
         original_product = product_features['image']
         product_resized = cv2.resize(original_product, (product_w, product_h), interpolation=cv2.INTER_LANCZOS4)
         
-        # Enhance the product for better integration
+        # Enhance the product for better integration with room lighting
         product_pil = Image.fromarray(product_resized)
-        product_enhanced = ImageEnhance.Sharpness(product_pil).enhance(1.3)
-        product_enhanced = ImageEnhance.Contrast(product_enhanced).enhance(1.2)
+        product_enhanced = ImageEnhance.Sharpness(product_pil).enhance(1.1)  # Slightly reduced from 1.2
+        product_enhanced = ImageEnhance.Contrast(product_enhanced).enhance(1.1)  # Slightly reduced from 1.15
         product_enhanced = np.array(product_enhanced)
         
-        # Place enhanced product
+        # Apply room lighting integration
+        room_region = room_image[max(0, start_y-50):min(h, start_y+product_h+50), 
+                                max(0, start_x-50):min(w, start_x+product_w+50)]
+        product_enhanced = self.enhance_product_integration(product_enhanced, room_region, lighting_info)
+        
+        # Place enhanced and integrated product
         result_image[start_y:start_y+product_h, start_x:start_x+product_w] = product_enhanced
         
-        # Create smart mask for environmental enhancement
-        env_mask, _ = self.create_smart_mask(room_image.shape, product_w, product_h, product_type)
+        # Create smart mask for environmental enhancement using dynamic lighting
+        env_mask, _ = self.create_smart_mask(room_image.shape, product_w, product_h, product_type, lighting_info)
         
         # Now use AI to enhance ONLY the surrounding area for shadows and lighting
         reference_pil = Image.fromarray(result_image)
@@ -757,27 +894,29 @@ class UltraHighQualityProductGenerationPipeline:
         depth_rgb = cv2.cvtColor(depth_map, cv2.COLOR_GRAY2RGB)
         depth_pil = Image.fromarray(depth_rgb)
         
-        # Prompt for ENVIRONMENTAL enhancement only
+        # Enhanced prompts based on detected lighting
+        light_desc = f"natural shadows from {lighting_info['light_source'].replace('_', ' ')} lighting"
+        
         if product_type == "tv":
-            prompt = f"realistic wall mounted television, professional lighting, realistic shadows, wall mounting hardware, ambient lighting"
-            negative_prompt = "changed screen content, altered TV, different image, blank screen"
+            prompt = f"realistic wall mounted television, {light_desc}, soft natural shadows, seamless wall integration, professional mounting, ambient room lighting"
+            negative_prompt = "rectangular shadows, artificial shadows, harsh edges, floating appearance, uniform lighting, changed screen content"
         else:
-            prompt = f"realistic framed artwork on wall, museum lighting, realistic shadows, professional gallery mounting, ambient lighting"
-            negative_prompt = "changed artwork, altered painting, different image, blank canvas"
+            prompt = f"realistic framed artwork, {light_desc}, soft natural shadows, seamless wall integration, professional gallery mounting, ambient room lighting"
+            negative_prompt = "rectangular shadows, artificial shadows, harsh edges, floating appearance, uniform lighting, changed artwork"
         
-        print(f"🔥 Creating CONTENT-PRESERVING {product_type} ({size_variant})...")
+        print(f"Generating integrated {product_type} ({size_variant}) with {lighting_info['light_source']} lighting...")
         
-        # Generate ONLY environmental effects with minimal strength
+        # Generate ONLY environmental effects with enhanced integration
         enhanced = self.pipe(
             prompt=prompt,
             negative_prompt=negative_prompt,
             image=reference_pil,
             mask_image=mask_pil,
             control_image=depth_pil,
-            num_inference_steps=40,     # Moderate steps for environmental effects
-            guidance_scale=7.0,         # Moderate guidance
+            num_inference_steps=35,     # Slightly reduced for subtlety
+            guidance_scale=6.5,         # Reduced for more natural results
             controlnet_conditioning_scale=1.0,
-            strength=0.3,               # VERY LOW strength for environment only
+            strength=0.2,               # Further reduced for very subtle effects
             eta=0.0,
             generator=torch.Generator(device=self.device).manual_seed(42)
         ).images[0]
@@ -787,10 +926,10 @@ class UltraHighQualityProductGenerationPipeline:
         # Ensure original product content is preserved
         enhanced_array[start_y:start_y+product_h, start_x:start_x+product_w] = product_enhanced
         
-        # Final enhancement
+        # Final subtle enhancement
         result = Image.fromarray(enhanced_array)
-        result = ImageEnhance.Sharpness(result).enhance(1.2)
-        result = ImageEnhance.Contrast(result).enhance(1.1)
+        result = ImageEnhance.Sharpness(result).enhance(1.1)  # More subtle
+        result = ImageEnhance.Contrast(result).enhance(1.05)  # More subtle
         
         return np.array(result)
         
@@ -881,7 +1020,7 @@ class UltraHighQualityProductGenerationPipeline:
         
     def run_ultra_quality_pipeline(self):
         """Run the ultra-high quality product generation pipeline"""
-        print("🚀 Starting Ultra-High Quality Generation Pipeline...")
+        print("Starting Ultra-Quality Pipeline...")
         
         # Setup ultra pipeline
         self.setup_ultra_pipeline()
@@ -892,39 +1031,33 @@ class UltraHighQualityProductGenerationPipeline:
         # Process TV with ultra quality
         try:
             tv_product_path = "assets/tv_1.png"
-            print(f"📺 Processing TV: {tv_product_path}")
             tv_results = self.process_single_product_ultra(room_path, tv_product_path, "tv")
             
             if tv_results:
                 product_features = tv_results[list(tv_results.keys())[0]]['features']
                 self.create_ultra_comparison(tv_results, "tv", product_features)
             else:
-                print("❌ No TV results generated")
+                print("✗ No TV results generated")
                 
         except Exception as e:
-            print(f"❌ TV processing failed: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"✗ TV processing failed: {e}")
             
         # Process Painting with ultra quality
         try:
             painting_product_path = "assets/painting_1.png"
-            print(f"🎨 Processing Painting: {painting_product_path}")
             painting_results = self.process_single_product_ultra(room_path, painting_product_path, "painting")
             
             if painting_results:
                 product_features = painting_results[list(painting_results.keys())[0]]['features']
                 self.create_ultra_comparison(painting_results, "painting", product_features)
             else:
-                print("❌ No painting results generated")
+                print("✗ No painting results generated")
                 
         except Exception as e:
-            print(f"❌ Painting processing failed: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"✗ Painting processing failed: {e}")
             
-        print("✅ Ultra-High Quality Generation Pipeline Complete")
-        print(f"📁 Results: {self.run_dir}")
+        print("✓ Pipeline Complete")
+        print(f"Results: {self.run_dir}")
 
 def main():
     """Main execution function"""
