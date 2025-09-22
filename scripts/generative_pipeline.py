@@ -40,12 +40,12 @@ class UltraHighQualityProductGenerationPipeline:
         self.run_dir = self.output_dir / "production_results" / f"run_{self.timestamp}"
         self.run_dir.mkdir(parents=True, exist_ok=True)
         
-        print("🔥 Task 2: Ultra-High Quality Product Generation Pipeline")
-        print(f"📁 Results output: {self.run_dir}")
+        print("AI Product Placement Pipeline - Initialized")
+        print(f"Output Directory: {self.run_dir}")
         
     def setup_ultra_pipeline(self):
         """Setup ultra-high quality ControlNet pipeline with optimized models"""
-        print("🚀 Initializing ultra-high quality AI models...")
+        print("Loading AI Models...")
         
         # Load ControlNet for depth conditioning - using compatible model
         controlnet = ControlNetModel.from_pretrained(
@@ -68,16 +68,16 @@ class UltraHighQualityProductGenerationPipeline:
             try:
                 self.pipe.enable_attention_slicing()
                 self.pipe.enable_vae_slicing()
-                print("✅ Ultra optimizations enabled")
+                print("GPU Optimizations: Enabled")
             except Exception as e:
-                print(f"⚠️ Some optimizations not available: {e}")
+                print(f"GPU Optimizations: Partial ({e})")
         
         # Load depth estimation model
         self.depth_processor = DPTImageProcessor.from_pretrained("Intel/dpt-large")
         self.depth_model = DPTForDepthEstimation.from_pretrained("Intel/dpt-large")
         self.depth_model = self.depth_model.to(self.device)
         
-        print(f"✅ Ultra models ready ({self.device})")
+        print(f"Models Ready - Device: {self.device.upper()}")
         
     def extract_detailed_product_features(self, product_path):
         """Extract detailed features from product image for exact reproduction"""
@@ -392,7 +392,7 @@ class UltraHighQualityProductGenerationPipeline:
             product_h = max_height
             product_w = int(product_h * actual_aspect_ratio)
                 
-        print(f"📐 {product_type} ({size_variant}): {product_w}×{product_h} px, aspect ratio {actual_aspect_ratio:.3f}:1")
+        print(f"Processing {product_type}: {size_variant} ({product_w}×{product_h}px)")
         return product_w, product_h
         
     def create_placement_mask(self, room_shape, product_w, product_h, product_type):
@@ -614,10 +614,10 @@ class UltraHighQualityProductGenerationPipeline:
             
         results = {}
         
-        for variant in variants:
+        for size_variant in variants:
             # Calculate optimal dimensions
             product_w, product_h = self.calculate_optimal_dimensions(
-                room_image.shape, product_type, variant, product_path
+                room_image.shape, product_type, size_variant, product_path
             )
             
             # Create placement mask (this will be updated in content_preserving_placement)
@@ -628,10 +628,10 @@ class UltraHighQualityProductGenerationPipeline:
             # Try content-preserving approach first
             try:
                 result = self.create_content_preserving_placement(
-                    room_image, product_features, mask, depth_map, placement_info, product_type, variant
+                    room_image, product_features, mask, depth_map, placement_info, product_type, size_variant
                 )
                 
-                results[variant] = {
+                results[size_variant] = {
                     'result': result,
                     'mask': mask,
                     'placement': placement_info,
@@ -642,20 +642,20 @@ class UltraHighQualityProductGenerationPipeline:
                 }
                 
                 # Save individual result
-                result_path = self.run_dir / f"{product_type}_{variant}_{self.timestamp}.png"
+                result_path = self.run_dir / f"{product_type}_{size_variant}_{self.timestamp}.png"
                 cv2.imwrite(str(result_path), cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-                print(f"✓ Saved {variant}: {result_path.name}")
+                print(f"Saved: {size_variant}")
                 
             except Exception as e:
-                print(f"✗ Content-preserving failed for {variant}, trying hybrid: {e}")
+                print(f"Failed: {size_variant} - {str(e)[:50]}...")
                 
                 # Fallback to hybrid approach
                 try:
                     result = self.generate_ultra_quality_placement(
-                        room_image, product_features, mask, depth_map, placement_info, product_type, variant
+                        room_image, product_features, mask, depth_map, placement_info, product_type, size_variant
                     )
                     
-                    results[variant] = {
+                    results[size_variant] = {
                         'result': result,
                         'mask': mask,
                         'placement': placement_info,
@@ -666,12 +666,12 @@ class UltraHighQualityProductGenerationPipeline:
                     }
                     
                     # Save individual result
-                    result_path = self.run_dir / f"{product_type}_{variant}_{self.timestamp}.png"
+                    result_path = self.run_dir / f"{product_type}_{size_variant}_{self.timestamp}.png"
                     cv2.imwrite(str(result_path), cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
-                    print(f"✓ Saved {variant}: {result_path.name}")
+                    print(f"Saved: {size_variant} (fallback)")
                     
                 except Exception as e2:
-                    print(f"✗ Failed to generate {variant}: {e2}")
+                    print(f"Failed: {size_variant} - {str(e2)[:50]}...")
                 
         return results
         
@@ -904,7 +904,7 @@ class UltraHighQualityProductGenerationPipeline:
             prompt = f"realistic framed artwork, {light_desc}, soft natural shadows, seamless wall integration, professional gallery mounting, ambient room lighting"
             negative_prompt = "rectangular shadows, artificial shadows, harsh edges, floating appearance, uniform lighting, changed artwork"
         
-        print(f"Generating integrated {product_type} ({size_variant}) with {lighting_info['light_source']} lighting...")
+        print(f"Generating {product_type} ({size_variant}) with {lighting_info['light_source'].replace('_', ' ')} lighting...")
         
         # Generate ONLY environmental effects with enhanced integration
         enhanced = self.pipe(
@@ -989,10 +989,10 @@ class UltraHighQualityProductGenerationPipeline:
             axes[1,1].axis('off')
             
             # Enhanced generation approach
-            axes[1,2].text(0.5, 0.5, 'CONTENT-PRESERVING Ultra-Quality:\n• Direct Product Placement\n• 12 Environmental Steps\n• Strength: 0.3 (Environment Only)\n• Smart Masking\n• Original Content 100% Preserved\n• AI-Enhanced Shadows & Lighting\n• Professional Grade Results', 
-                          ha='center', va='center', fontsize=11, transform=axes[1,2].transAxes,
-                          bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen", alpha=0.9))
-            axes[1,2].set_title('Content-Preserving Approach', fontsize=14)
+            axes[1,2].text(0.05, 0.95, '• Advanced AI Integration\n• Dynamic Lighting Analysis\n• Ambient Color Matching\n• Realistic Shadow Casting\n• High-Quality Depth Processing\n• Content Preservation\n• Production-Grade Output', 
+                          ha='left', va='top', fontsize=11, transform=axes[1,2].transAxes,
+                          bbox=dict(boxstyle="round,pad=0.4", facecolor="lightblue", alpha=0.8))
+            axes[1,2].set_title('Technical Features', fontsize=14)
             axes[1,2].axis('off')
             
             # Second variant result
@@ -1015,12 +1015,12 @@ class UltraHighQualityProductGenerationPipeline:
         fig.savefig(comparison_path, dpi=300, bbox_inches='tight', facecolor='white')
         plt.close()
         
-        print(f"✅ Saved ultra comparison: {comparison_path.name}")
+        print(f"Comparison saved: {comparison_path.name}")
         return comparison_path
         
     def run_ultra_quality_pipeline(self):
         """Run the ultra-high quality product generation pipeline"""
-        print("Starting Ultra-Quality Pipeline...")
+        print("Starting Production Pipeline...")
         
         # Setup ultra pipeline
         self.setup_ultra_pipeline()
@@ -1031,34 +1031,36 @@ class UltraHighQualityProductGenerationPipeline:
         # Process TV with ultra quality
         try:
             tv_product_path = "assets/tv_1.png"
+            print("Processing: Television Products")
             tv_results = self.process_single_product_ultra(room_path, tv_product_path, "tv")
             
             if tv_results:
                 product_features = tv_results[list(tv_results.keys())[0]]['features']
                 self.create_ultra_comparison(tv_results, "tv", product_features)
             else:
-                print("✗ No TV results generated")
+                print("No TV results generated")
                 
         except Exception as e:
-            print(f"✗ TV processing failed: {e}")
+            print(f"TV processing failed: {str(e)[:50]}...")
             
         # Process Painting with ultra quality
         try:
             painting_product_path = "assets/painting_1.png"
+            print("Processing: Artwork Products")
             painting_results = self.process_single_product_ultra(room_path, painting_product_path, "painting")
             
             if painting_results:
                 product_features = painting_results[list(painting_results.keys())[0]]['features']
                 self.create_ultra_comparison(painting_results, "painting", product_features)
             else:
-                print("✗ No painting results generated")
+                print("No painting results generated")
                 
         except Exception as e:
-            print(f"✗ Painting processing failed: {e}")
+            print(f"Painting processing failed: {str(e)[:50]}...")
             
-        print("✓ Pipeline Complete")
+        print("Pipeline Complete")
         print(f"Results: {self.run_dir}")
-
+        
 def main():
     """Main execution function"""
     pipeline = UltraHighQualityProductGenerationPipeline()

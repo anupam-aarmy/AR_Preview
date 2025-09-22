@@ -1,12 +1,12 @@
 """
 AR Preview MVP - Production Release
-Implements both Task 1 (Deterministic) and Task 2 (Generative) pipelines
-Production-ready implementation with aspect-corrected placement and enhanced detail preservation
+Implements both Task 1 (Deterministic) and Task 2 (Balanced Generative) pipelines
+Production-ready implementation with aspect-corrected placement and visible content generation
 
 Key Features:
 - Perfect aspect ratio preservation from actual product images
 - Smart sizing with bounds checking  
-- Enhanced detail preservation in generative pipeline
+- Balanced generative pipeline with visible content
 - Production-quality error handling and logging
 """
 
@@ -21,18 +21,18 @@ sys.path.append(str(Path(__file__).parent / "scripts"))
 def main():
     """Main execution - runs production-ready pipelines"""
     print("🏠 AR Preview - AI Product Placement Solution")
-    print("🎯 Production-ready pipelines with aspect ratio preservation")
+    print("🎯 Production-ready pipelines with balanced generation")
     
     parser = argparse.ArgumentParser(description="AR Preview - Production Pipeline Implementation")
     parser.add_argument("--task", type=str, required=False, default="all", 
                        choices=["1", "2", "all"], 
-                       help="Task to run (1: Deterministic SAM+Placement, 2: Generative SD+ControlNet, all: Both)")
+                       help="Task to run (1: Deterministic SAM+Placement, 2: Balanced Generative SD+ControlNet, all: Both)")
     
     # Interactive mode if no arguments provided
     if len(sys.argv) == 1:
         print("\n🔧 Available Pipelines:")
         print("1. Task 1: Deterministic (SAM + OpenCV)")
-        print("2. Task 2: Generative (Stable Diffusion + ControlNet)")
+        print("2. Task 2: Balanced Generative (Stable Diffusion + ControlNet)")
         print("3. Both pipelines")
         
         choice = input("\nSelect pipeline (1/2/3) or press Enter for both: ").strip()
@@ -75,7 +75,7 @@ def run_deterministic_pipeline():
         print(f"❌ Task 1 execution error: {e}")
         
 def run_generative_pipeline():
-    """Run Task 2: Production Generative Pipeline (SD + ControlNet)""" 
+    """Run Task 2: Balanced Generative Pipeline (SD + ControlNet)""" 
     try:
         from generative_pipeline import main as generative_main
         generative_main()
@@ -92,7 +92,7 @@ def run_improved_task1():
     run_deterministic_pipeline()
         
 def run_improved_task2():
-    """Legacy function - redirects to production generative pipeline"""
+    """Legacy function - redirects to balanced generative pipeline"""
     run_generative_pipeline()
 
 def run_task1():
@@ -100,7 +100,7 @@ def run_task1():
     run_deterministic_pipeline()
         
 def run_task2():
-    """Legacy function - redirects to production generative pipeline"""
+    """Legacy function - redirects to balanced generative pipeline"""
     run_generative_pipeline()
 
 if __name__ == "__main__":
