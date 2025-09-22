@@ -989,8 +989,8 @@ class UltraHighQualityProductGenerationPipeline:
             axes[1,1].axis('off')
             
             # Enhanced generation approach
-            axes[1,2].text(0.05, 0.95, '• Advanced AI Integration\n• Dynamic Lighting Analysis\n• Ambient Color Matching\n• Realistic Shadow Casting\n• High-Quality Depth Processing\n• Content Preservation\n• Production-Grade Output', 
-                          ha='left', va='top', fontsize=11, transform=axes[1,2].transAxes,
+            axes[1,2].text(0.5, 0.5, '• Advanced AI Integration\n• Dynamic Lighting Analysis\n• Ambient Color Matching\n• Realistic Shadow Casting\n• High-Quality Depth Processing\n• Content Preservation\n• Production-Grade Output', 
+                          ha='left', va='center', fontsize=11, transform=axes[1,2].transAxes,
                           bbox=dict(boxstyle="round,pad=0.4", facecolor="lightblue", alpha=0.8))
             axes[1,2].set_title('Technical Features', fontsize=14)
             axes[1,2].axis('off')
