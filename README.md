@@ -5,8 +5,8 @@
 
 This project implements **two production-ready solutions** for realistic wall fitting visualization:
 
-- **Task 1**: Deterministic computer vision pipeline (SAM + OpenCV) ✅ **PRODUCTION READY**
-- **Task 2**: Enhanced generative AI solution (Stable Diffusion + ControlNet) ✅ **PRODUCTION READY**
+- **1**: Deterministic computer vision pipeline (SAM + OpenCV) 
+- **2**: Enhanced generative AI solution (Stable Diffusion + ControlNet) 
 
 Both pipelines allow users to visualize wall fittings (TVs, paintings, frames) in their space with realistic scaling, perspective, and lighting while maintaining perfect aspect ratios.
 
