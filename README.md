@@ -1,7 +1,5 @@
-# AR Preview - AI-Powered Product Visualization MVP
-
-> **Production-Ready Implementation of AI Assignment Module 2 (Single Wall Fitting)**  
-> Complete solution for realistic wall fitting visualization using both deterministic and generative AI approaches.
+# AR Preview - AI-Powered Product Visualization
+> Complete solution for realistic wall fitting visualization using deterministic segmentation and generative AI approaches.
 
 ## 🎯 Project Overview
 
@@ -11,13 +9,6 @@ This project implements **two production-ready solutions** for realistic wall fi
 - **Task 2**: Enhanced generative AI solution (Stable Diffusion + ControlNet) ✅ **PRODUCTION READY**
 
 Both pipelines allow users to visualize wall fittings (TVs, paintings, frames) in their space with realistic scaling, perspective, and lighting while maintaining perfect aspect ratios.
-
-### **Latest Enhancements (v2.0)**
-- ✅ **Advanced Ambiance Blending**: Products dynamically adapt to room lighting (15% brightness reduction)
-- ✅ **Dynamic Shadow Enhancement**: Smart shadow casting based on room lighting analysis (+3%)
-- ✅ **Room Color Temperature Matching**: Automatic color temperature adjustment for better integration
-- ✅ **Production Console Output**: Clean, professional logging suitable for enterprise environments
-- ✅ **Enhanced Visualizations**: Professional comparison charts with centered technical specifications
 
 ## 🚀 Quick Start
 
@@ -99,7 +90,7 @@ python scripts/generative_pipeline.py      # Task 2 directly
 
 ## 🏗️ Architecture
 
-### **Task 1: Deterministic Pipeline**
+### **1: Deterministic Pipeline**
 ```
 Room Image → SAM Segmentation → Wall Detection → Aspect Ratio Detection → Smart Sizing → Product Placement → Alpha Blending → Result
 ```
@@ -111,7 +102,7 @@ Room Image → SAM Segmentation → Wall Detection → Aspect Ratio Detection �
 - **Complete Mask Filling**: Products completely fill designated areas
 - **Safe Positioning**: Bounds checking prevents overflow
 
-### **Task 2: Enhanced Generative Pipeline** 
+### **2: Enhanced Generative Pipeline** 
 ```
 Room Image → Lighting Analysis → Depth Estimation → ControlNet Conditioning → SD Generation → Enhanced Integration → Result
 ```
@@ -158,8 +149,7 @@ AR_Preview/
 │       └── sam_vit_h_4b8939.pth        # SAM model checkpoint
 │
 ├── 📚 Documentation
-│   ├── docs/assignment/AI_Assignment.md      # Original requirements
-│   ├── docs/reports/PROOF_OF_COMPLETION.md  # Enhancement validation results
+│   ├── docs/reports/PROOF_OF_COMPLETION.md  # Validation results
 │   └── docs/reports/RELIABILITY_TEST_RESULTS.md  # Performance metrics
 │
 └── 🔧 Configuration
@@ -170,33 +160,31 @@ AR_Preview/
 
 ## 🎯 **Production Features**
 
-### **Task 1: Deterministic Pipeline (SAM + OpenCV)**
-- ✅ **Perfect Aspect Ratios**: Uses ACTUAL product dimensions (TV: 1.658:1, Painting: 0.774:1)
-- ✅ **Smart Sizing**: TV (28%/35% width), Painting (18%/22% width) with bounds checking
-- ✅ **Complete Mask Filling**: Products completely fill placement rectangles
+### **1: Deterministic Pipeline (SAM + OpenCV)**
+- ✅ **Aspect Ratios**: Uses ACTUAL product dimensions
+- ✅ **Smart Sizing**: Resizes product with bounds checking
+- ✅ **Complete Mask Filling**: Products completely fill placement area
 - ✅ **Safe Positioning**: Bounds checking prevents floor/wall overflow
 - ✅ **High-Quality Resampling**: LANCZOS resampling for maximum detail preservation
 - ✅ **99.9% SAM Confidence**: Reliable wall detection across room types
 
-### **Task 2: Enhanced Generative Pipeline (Stable Diffusion + ControlNet v2.0)**
-- ✅ **Advanced Ambiance Blending**: Dynamic brightness adjustment (15% reduction for natural integration)
-- ✅ **Dynamic Shadow Enhancement**: Smart shadow casting based on room lighting analysis (+3%)
+### **2: Generative Pipeline (Stable Diffusion + ControlNet v2.0)**
+- ✅ **Ambiance Blending**: Dynamic brightness adjustment 
+- ✅ **Dynamic Shadows**: Smart shadow casting based on room lighting analysis
 - ✅ **Room Color Temperature Matching**: Automatic adjustment for warm/cool room ambiance
 - ✅ **Enhanced Edge Processing**: Subtle feathering for smoother product integration
-- ✅ **Production Console Output**: Clean, professional logging suitable for enterprise environments
-- ✅ **Professional Visualizations**: Centered technical specifications with left-aligned content
-- ✅ **Actual Aspect Ratios**: TV (1.658:1), Painting (0.774:1) from product images
+- ✅ **Actual Aspect Ratios**: Uses exact aspect ratios from product images
 - ✅ **ControlNet Conditioning**: Depth-aware generation with optimized parameters
 
 ## 📈 **Performance Metrics**
 
-### **Task 1 Performance**
+### **1. Performance**
 - **Aspect Accuracy**: 99.7% (1.659 actual vs 1.658 expected for TV)
 - **Processing Time**: ~15 seconds per pipeline run
 - **Success Rate**: 100% across all room/product combinations
 - **Visual Quality**: Complete mask filling with no background artifacts
 
-### **Task 2 Enhanced Performance**
+### **2. Enhanced Performance**
 - **Integration Quality**: Significantly improved room ambiance blending
 - **Processing Time**: ~90 seconds per pipeline run (includes enhanced processing)
 - **Shadow Realism**: Dynamic shadows based on actual room lighting analysis
@@ -263,21 +251,6 @@ python main.py --task all
 - **Image Processing**: PIL with enhanced room-adaptive processing
 - **Dependencies**: Pinned stable versions for production reliability
 
-## 📋 **AI Assignment Compliance**
-
-### **✅ Task 1 Requirements - COMPLETE**
-- [x] **Wall segmentation using AI vision model** - SAM with 99.9% confidence
-- [x] **Realistic product placement** - Aspect ratio preservation + smart sizing  
-- [x] **Visual realism** - Complete mask filling, no copy-paste artifacts
-- [x] **Clean Python pipeline** - Production-ready with comprehensive error handling
-
-### **✅ Task 2 Requirements - ENHANCED COMPLETE**
-- [x] **Stable Diffusion pipeline setup** - Hugging Face/Diffusers implementation with enhancements
-- [x] **ControlNet conditioning** - Depth conditioning with enhanced integration
-- [x] **Size variations** - 42" vs 55" TV, Medium vs Large painting demonstrations
-- [x] **Output quality** - Enhanced ambiance blending and professional visualization
-- [x] **Understanding of fine-tuning** - Advanced room-adaptive processing and dynamic enhancement
-
 ## 🎖️ **Production Highlights**
 
 ### **Innovation**
@@ -300,17 +273,13 @@ python main.py --task all
 
 ## 🤝 **Contributing**
 
-This is a complete production implementation meeting all AI assignment requirements with enhanced integration features. For enhancements:
+This is a complete production implementation with enhanced integration features. For enhancements:
 
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/enhancement`
 3. Commit changes: `git commit -m 'Add enhancement'`
 4. Push to branch: `git push origin feature/enhancement`
 5. Submit Pull Request
-
-## 📝 **License**
-
-This project is developed as an AI assignment implementation demonstrating production-quality computer vision and generative AI techniques with enhanced ambiance blending capabilities.
 
 ---
 
